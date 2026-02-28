@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Blue Mop CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--cy:#3EC6F0;--cyd:#1AA8D4;--cyp:#D6F4FC;--cyxp:#EEF9FE;--bg:#F8FCFF;--s1:#fff;--s2:#F0FAFF;--s3:#E0F4FB;--bd:rgba(62,198,240,.18);--tx:#1A3A4A;--t2:rgba(26,58,74,.72);--t3:rgba(26,58,74,.42);--won:#22B573;--lost:#E84040;--warn:#F5A623;--f:"Nunito",sans-serif;--m:"DM Mono",monospace}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);font-size:14px}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(circle 90px at 8% 10%,rgba(62,198,240,.1) 0%,transparent 100%),radial-gradient(circle 120px at 92% 8%,rgba(62,198,240,.08) 0%,transparent 100%),radial-gradient(circle 100px at 4% 72%,rgba(62,198,240,.07) 0%,transparent 100%),radial-gradient(circle 140px at 82% 90%,rgba(62,198,240,.09) 0%,transparent 100%)}
+.bbl{position:fixed;border-radius:50%;border:2px solid rgba(62,198,240,.14);pointer-events:none;z-index:0;animation:fb 9s linear infinite}
+@keyframes fb{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:rgba(62,198,240,.35);border-radius:4px}
+.shell{display:flex;height:100vh;position:relative;z-index:1}
+.sb{width:218px;min-width:218px;background:var(--s1);border-right:1px solid var(--bd);box-shadow:3px 0 20px rgba(62,198,240,.07);display:flex;flex-direction:column;flex-shrink:0;z-index:10}
+.sb-top{padding:16px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--cy),var(--cyd));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+.sb-nm{font-size:14px;font-weight:900;color:var(--cyd);text-transform:uppercase;letter-spacing:-.3px}
+.sb-tg{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.nav{padding:8px 0;flex:1;overflow-y:auto}
+.nl{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;padding:10px 15px 4px}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 10px;margin:2px 7px;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;transition:all .14s;border-left:3px solid transparent;border-radius:10px}
+.ni:hover{color:var(--tx);background:var(--s2)}
+.ni.on{color:var(--cyd);background:var(--cyp);border-left-color:var(--cy);box-shadow:0 2px 10px rgba(62,198,240,.13)}
+.ni-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.ni-badge{margin-left:auto;background:var(--lost);border-radius:10px;font-family:var(--m);font-size:9px;color:#fff;padding:2px 6px;min-width:18px;text-align:center}
+.sb-bot{padding:12px 14px 16px;border-top:1px solid var(--bd);background:var(--s2)}
+.sbt{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.ss{display:flex;justify-content:space-between;padding:3px 0}
+.ss-l{font-size:11px;color:var(--t3)}.ss-v{font-family:var(--m);font-size:12px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;z-index:2}
+.topbar{height:54px;flex-shrink:0;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 18px;gap:10px}
+.tb-ttl{font-size:18px;font-weight:900;color:var(--cyd);flex:1;letter-spacing:-.5px}
+.srch{display:none;align-items:center;gap:7px;background:var(--s2);border:1.5px solid var(--bd);border-radius:999px;padding:7px 13px}
+.srch:focus-within{border-color:var(--cy)}
+.srch input{background:none;border:none;outline:none;color:var(--tx);font-family:var(--f);font-size:13px;width:160px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 17px;border-radius:999px;font-size:13px;font-weight:800;font-family:var(--f);cursor:pointer;border:none;transition:all .14s;white-space:nowrap}
+.btn-cy{background:var(--cy);color:#fff;box-shadow:0 4px 14px rgba(62,198,240,.27)}.btn-cy:hover{background:var(--cyd);transform:translateY(-1px)}
+.btn-gh{background:var(--s2);color:var(--t2);border:1.5px solid var(--bd);font-weight:700}.btn-gh:hover{color:var(--tx);border-color:var(--cy);background:var(--cyp)}
+.btn-rd{background:rgba(232,64,64,.07);color:var(--lost);border:1.5px solid rgba(232,64,64,.22);font-weight:700}
+.btn-sm{padding:6px 13px;font-size:12px}.btn-xs{padding:3px 9px;font-size:11px}
+.ca{flex:1;overflow:hidden;position:relative;z-index:1}
+.view{display:none;height:100%;overflow:hidden;flex-direction:column}.view.on{display:flex}
+#v-home{overflow-y:auto;padding:18px;gap:14px}
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;flex-shrink:0}
+.kpi{background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;padding:14px;cursor:pointer;transition:all .16s;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(62,198,240,.05)}
+.kpi:hover{border-color:var(--cy);transform:translateY(-2px);box-shadow:0 10px 22px rgba(62,198,240,.1)}
+.kpi::after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--kc,var(--cy))}
+.kpi::before{content:"";position:absolute;top:-25px;right:-25px;width:70px;height:70px;border-radius:50%;background:var(--kc,var(--cy));opacity:.06}
+.kl{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.kv{font-size:24px;font-weight:900;color:var(--kc,var(--tx));line-height:1;letter-spacing:-1px}.ks{font-size:11px;color:var(--t2);margin-top:4px}
+.hg{display:grid;grid-template-columns:1fr 1fr 260px;gap:12px;min-height:0}
+.panel{background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 4px 10px rgba(62,198,240,.05)}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--bd);flex-shrink:0;background:linear-gradient(135deg,var(--s2),var(--s1))}
+.pt{font-size:13px;font-weight:800;color:var(--cyd);display:flex;align-items:center;gap:7px}
+.pld{width:7px;height:7px;border-radius:50%;background:var(--won);animation:throb 2s infinite}
+@keyframes throb{0%,100%{opacity:1}50%{opacity:.4}}
+.pb{flex:1;overflow-y:auto}
+.ar{display:flex;align-items:stretch;padding:10px 14px;border-bottom:1px solid var(--s3);cursor:pointer;transition:background .1s}
+.ar:hover{background:var(--s2)}.ar:last-child{border-bottom:none}
+.as{width:3px;border-radius:3px;margin-right:11px;flex-shrink:0}
+.am{flex:1;min-width:0}
+.ab{font-weight:800;font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at{font-size:12px;color:var(--t2);margin-top:2px}.ad{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--m)}
+.ar-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px}
+.ug{font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;font-family:var(--m);letter-spacing:.5px;text-transform:uppercase}
+.u-now{background:rgba(232,64,64,.12);color:var(--lost)}.u-today{background:rgba(245,166,35,.12);color:var(--warn)}
+.ppr{display:flex;align-items:center;gap:9px;padding:8px 14px;border-bottom:1px solid var(--s3);cursor:pointer;transition:background .1s}
+.ppr:hover{background:var(--s2)}.ppr:last-child{border-bottom:none}
+.ppn{font-size:11px;font-weight:700;color:var(--t2);width:86px;flex-shrink:0}
+.ppt{flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden}.ppf{height:100%;border-radius:3px}
+.ppc{font-family:var(--m);font-size:12px;width:16px;text-align:right;flex-shrink:0}
+.kboard{display:flex;gap:11px;padding:14px;overflow-x:auto;height:100%;align-items:flex-start}
+.kcol{width:232px;min-width:232px;background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;display:flex;flex-direction:column;max-height:100%;flex-shrink:0;box-shadow:0 4px 10px rgba(62,198,240,.05)}
+.kch{padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(135deg,var(--s2),var(--s1));border-radius:12px 12px 0 0}
+.kct{font-size:11px;font-weight:800;display:flex;align-items:center;gap:7px;color:var(--cyd)}
+.kcc{font-family:var(--m);font-size:10px;background:var(--cyp);padding:2px 7px;border-radius:10px;color:var(--cyd)}
+.kcards{flex:1;overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:7px}
+.kcard{background:var(--bg);border:1.5px solid var(--bd);border-radius:11px;padding:11px;cursor:pointer;transition:all .14s}
+.kcard:hover{border-color:var(--cy);transform:translateY(-2px);box-shadow:0 8px 18px rgba(62,198,240,.12)}
+.kn{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:3px;line-height:1.3}
+.ksb{font-size:11px;color:var(--t2);margin-bottom:7px}.kf{display:flex;align-items:center;justify-content:space-between}
+.iv-top{background:var(--s1);border-bottom:1px solid var(--bd);padding:13px 18px;flex-shrink:0}
+.iv-h{font-size:16px;font-weight:900;color:var(--cyd);margin-bottom:3px}.iv-d{font-size:12px;color:var(--t3)}
+.iv-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:11px}
+.ikpi{background:var(--s2);border:1.5px solid var(--bd);border-radius:10px;padding:10px;text-align:center}
+.ikv{font-size:20px;font-weight:900;line-height:1}.ikl{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
+.itabs{display:flex;border-bottom:2px solid var(--bd);flex-shrink:0;background:var(--s1);padding:0 18px}
+.itab{padding:11px 18px;font-size:11px;font-weight:800;color:var(--t3);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-transform:uppercase;letter-spacing:1px;transition:all .15s;font-family:var(--m)}
+.itab.on{color:var(--cyd);border-bottom-color:var(--cy)}
+.icont{display:none;flex:1;overflow-y:auto;padding:18px}.icont.on{display:block}
+.ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(278px,1fr));gap:12px}
+.ic{background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;padding:16px;border-top:4px solid;cursor:pointer;transition:all .14s;box-shadow:0 4px 10px rgba(62,198,240,.04)}
+.ic:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(62,198,240,.1)}
+.ic.hot{border-top-color:var(--lost)}.ic.warm{border-top-color:var(--warn)}.ic.cold{border-top-color:var(--won)}
+.ic-rk{font-family:var(--m);font-size:8px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.ic-nm{font-size:15px;font-weight:900;color:var(--tx);margin-bottom:2px}
+.ic-sb{font-size:11px;color:var(--t3);margin-bottom:11px}
+.ic-sr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ic-sc{font-size:32px;font-weight:900;line-height:1}
+.ic-sc.hot{color:var(--lost)}.ic-sc.warm{color:var(--warn)}.ic-sc.cold{color:var(--won)}
+.ic-stars{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.ic-sv{font-size:15px;font-weight:900}.ic-sv.hot{color:var(--lost)}.ic-sv.warm{color:var(--warn)}.ic-sv.cold{color:var(--won)}
+.ic-issue{font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:11px;border-left:2px solid var(--bd);padding-left:10px}
+.ic-btn{width:100%;padding:9px;background:var(--cy);color:#fff;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+.ic-btn:hover{background:var(--cyd)}.ic-btn.red{background:var(--lost)}.ic-btn.warm{background:var(--warn)}
+.zsec{margin-bottom:34px}
+.ztop{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.znm{font-size:15px;font-weight:900;color:var(--cyd)}
+.zbadge{background:var(--cy);color:#fff;font-size:9px;font-weight:800;padding:3px 9px;border-radius:11px;text-transform:uppercase;letter-spacing:1px}
+.zdesc{font-size:11px;color:var(--t3);margin-bottom:11px}
+.tlwrap{position:relative;padding-left:24px}
+.tlwrap::before{content:"";position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--bd)}
+.tlcard{position:relative;margin-bottom:10px;background:var(--s1);border:1.5px solid var(--bd);border-radius:11px;padding:13px 14px;cursor:pointer;transition:all .13s}
+.tlcard:hover{border-color:var(--cy);box-shadow:0 5px 16px rgba(62,198,240,.08)}
+.tlcard::before{content:"";position:absolute;left:-19px;top:16px;width:10px;height:10px;border-radius:50%;border:2px solid}
+.tlcard.hot::before{background:var(--lost);border-color:var(--lost);box-shadow:0 0 6px rgba(232,64,64,.4)}
+.tlcard.warm::before{background:var(--warn);border-color:var(--warn)}
+.tlcard.cold::before{background:var(--won);border-color:var(--won)}
+.tltop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.tlnm{font-size:14px;font-weight:800;color:var(--tx)}.tlsb{font-size:11px;color:var(--t3);margin-top:2px}
+.tlmeta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.tlbody{margin-top:10px;display:none}.tlbody.open{display:block}
+.tlexp{font-size:11px;color:var(--t3);margin-top:7px;font-weight:700}
+.tlcq{background:rgba(232,64,64,.06);border-left:3px solid var(--lost);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:10px;font-size:12px;color:var(--t2);line-height:1.6}
+.tlql{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--lost);font-weight:800;margin-bottom:4px;font-family:var(--m)}
+.tlact{background:rgba(62,198,240,.07);border:1.5px solid var(--bd);padding:9px 12px;border-radius:8px;margin-top:9px;display:flex;justify-content:space-between;align-items:center}
+.tlact span{font-size:12px;font-weight:700;color:var(--cyd)}
+.tlsc{font-size:20px;font-weight:900}.tlsc.hot{color:var(--lost)}.tlsc.warm{color:var(--warn)}.tlsc.cold{color:var(--won)}
+.zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px}
+.zcard{background:var(--s1);border:1.5px solid var(--bd);border-radius:13px;padding:16px;box-shadow:0 4px 10px rgba(62,198,240,.04)}
+.zcard h3{font-size:14px;font-weight:900;color:var(--tx);margin-bottom:3px}
+.zcd{font-size:11px;color:var(--t3);margin-bottom:12px}
+.zbar{background:var(--s3);height:6px;border-radius:3px;margin-bottom:12px;overflow:hidden}.zfill{height:100%;border-radius:3px;background:var(--cy)}
+.zst{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}.zst .l{color:var(--t3)}.zst .v{font-weight:800}
+.zact{font-size:11px;color:var(--cyd);font-weight:700;border-top:1px solid var(--bd);padding-top:10px;margin-top:6px;line-height:1.5}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.rcard{background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 4px 10px rgba(62,198,240,.04)}
+.rhead{color:#fff;padding:14px 15px}.rhead h3{font-size:14px;font-weight:900}.rhead p{font-size:11px;opacity:.85;margin-top:2px}
+.rstop{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-bottom:1px solid var(--s3)}.rstop:last-child{border-bottom:none}
+.rsn{width:24px;height:24px;border-radius:50%;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.rsm{flex:1}.rsnm{font-size:13px;font-weight:800;color:var(--tx)}.rssb{font-size:11px;color:var(--t3)}
+.rspt{font-size:11px;color:var(--t2);margin-top:5px;line-height:1.5;background:var(--s2);border-radius:6px;padding:5px 8px}
+.fs{display:flex;gap:7px;padding:9px 14px;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--s1);overflow-x:auto}
+.fc{padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);color:var(--t2);background:var(--s1);transition:all .13s;white-space:nowrap}
+.fc:hover{color:var(--cyd);border-color:var(--cy)}.fc.on{background:var(--cy);color:#fff;border-color:var(--cy);box-shadow:0 3px 10px rgba(62,198,240,.25)}
+.tw{flex:1;overflow:auto;background:var(--s1)}
+.lt{width:100%;border-collapse:collapse}
+.lt th{position:sticky;top:0;z-index:5;background:var(--s2);text-align:left;padding:9px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);font-family:var(--m);border-bottom:1px solid var(--bd);font-weight:500;white-space:nowrap}
+.lt td{padding:10px 12px;border-bottom:1px solid var(--s3);vertical-align:middle;white-space:nowrap;background:var(--s1)}
+.lt tr:hover td{background:var(--cyxp);cursor:pointer}
+.ln{font-size:13px;font-weight:800;color:var(--tx)}.lsb{font-size:11px;color:var(--t3);margin-top:1px}
+.sc{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:8px;font-family:var(--m);font-size:11px;font-weight:500}
+.sp{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.spd{width:5px;height:5px;border-radius:50%}
+.ed{display:flex;gap:3px}.edot{width:9px;height:9px;border-radius:50%}
+/* DRAWER */
+.dpo{position:fixed;inset:0;background:rgba(26,58,74,.35);backdrop-filter:blur(4px);z-index:500;opacity:0;pointer-events:none;transition:opacity .2s}
+.dpo.on{opacity:1;pointer-events:all}
+.dpp{position:fixed;top:0;right:0;bottom:0;width:500px;background:var(--s1);border-left:1px solid var(--bd);z-index:501;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:-18px 0 50px rgba(62,198,240,.12)}
+.dpp.on{transform:translateX(0)}
+.dph{padding:15px 18px;border-bottom:1px solid var(--bd);flex-shrink:0;background:linear-gradient(135deg,var(--s2),var(--s1))}
+.dph-t{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}
+.dpn{font-size:18px;font-weight:900;line-height:1.2;color:var(--cyd)}
+.dpc{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--bd);background:transparent;color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
+.dpc:hover{background:var(--cyp);color:var(--cyd);border-color:var(--cy)}
+.dpm{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.dpb{flex:1;overflow-y:auto}
+.ds{padding:12px 17px;border-bottom:1px solid var(--s3)}
+.dst{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);font-family:var(--m);margin-bottom:9px}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.dfl{font-size:10px;color:var(--t3);margin-bottom:3px;font-family:var(--m)}.dfv{font-size:13px;color:var(--tx);font-weight:700}
+.dfv a{color:var(--cy);text-decoration:none}.dfv.ov{color:var(--warn)}.dfv.wn{color:var(--won)}
+/* INLINE EDIT */
+.dfe{background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:6px 9px;font-size:13px;color:var(--tx);font-family:var(--f);outline:none;width:100%;transition:border-color .13s;font-weight:600}
+.dfe:focus{border-color:var(--cy);background:var(--cyp)}
+.df-edit-row{display:flex;align-items:center;gap:6px}
+.df-pencil{background:none;border:none;cursor:pointer;color:var(--t3);font-size:11px;padding:2px 5px;border-radius:4px;transition:all .12s}
+.df-pencil:hover{background:var(--cyp);color:var(--cyd)}
+.ki{background:rgba(232,64,64,.06);border-left:3px solid var(--lost);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:10px}
+.kil{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--lost);font-weight:800;margin-bottom:4px;font-family:var(--m)}
+.kip{font-size:12px;color:var(--t2);line-height:1.6}
+.sqr{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.sqst{background:var(--s2);border:1.5px solid var(--bd);border-radius:9px;padding:9px 7px;text-align:center}
+.sqst.dn{border-color:rgba(34,181,115,.4);background:rgba(34,181,115,.07)}
+.sqn{font-size:8px;color:var(--t3);font-family:var(--m);margin-bottom:4px;letter-spacing:1px}
+.sqd{font-size:12px;color:var(--tx);font-weight:700}.sqs{font-size:10px;margin-top:4px}
+.schips{display:flex;flex-wrap:wrap;gap:6px}
+.sch{padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid transparent;transition:all .12s}
+.sch.cur{border-width:2px!important;box-shadow:0 2px 8px rgba(62,198,240,.18)}
+.ai{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--s3)}.ai:last-child{border-bottom:none}
+.aib{width:6px;height:6px;border-radius:50%;background:var(--cy);flex-shrink:0;margin-top:4px}
+.ait{font-size:12px;color:var(--t2);line-height:1.5}.aid{font-size:10px;color:var(--t3);font-family:var(--m);margin-top:2px}
+.lb{padding:11px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-shrink:0;background:var(--s1)}
+.li{flex:1;background:var(--s2);border:1.5px solid var(--bd);border-radius:999px;padding:8px 13px;font-size:13px;color:var(--tx);font-family:var(--f);outline:none;transition:border-color .13s}
+.li:focus{border-color:var(--cy)}
+.da{padding:11px 14px;border-top:1px solid var(--s3);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--s1)}
+/* TEMPLATES */
+.tsl{width:248px;min-width:248px;background:var(--s1);border-right:1px solid var(--bd);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+.ti{background:var(--s2);border:1.5px solid var(--bd);border-radius:11px;padding:11px;cursor:pointer;transition:all .13s}
+.ti:hover,.ti.on{border-color:var(--cy);background:var(--cyp)}
+.tin{font-family:var(--m);font-size:8px;color:var(--cyd);letter-spacing:1.5px;margin-bottom:4px;text-transform:uppercase}
+.tim{font-size:13px;font-weight:800;margin-bottom:3px;color:var(--tx)}.tid{font-size:11px;color:var(--t3)}
+.tp{flex:1;overflow-y:auto;padding:22px}
+.tpl{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.tps{background:var(--s2);border:1.5px solid var(--bd);border-radius:9px;padding:11px 13px;font-size:14px;font-weight:800;margin-bottom:14px;color:var(--tx)}
+.tpb{background:var(--s2);border:1.5px solid var(--bd);border-radius:9px;padding:16px;font-size:13px;line-height:1.9;color:var(--t2);white-space:pre-wrap}
+/* LEAD TIMELINE VIEW */
+#v-timeline{overflow-y:auto;padding:0}
+.ltl-bar{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--s1)}
+.ltl-bar select,.ltl-bar input{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:7px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none}
+.ltl-bar select:focus,.ltl-bar input:focus{border-color:var(--cy)}
+.ltl-list{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.ltl-card{background:var(--s1);border:1.5px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(62,198,240,.05)}
+.ltl-head{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:background .12s}
+.ltl-head:hover{background:var(--s2)}
+.ltl-age-bar{width:80px;height:6px;background:var(--s3);border-radius:3px;overflow:hidden;flex-shrink:0}
+.ltl-age-fill{height:100%;border-radius:3px}
+.ltl-body{padding:14px 16px;border-top:1px solid var(--s3);display:none}
+.ltl-body.on{display:block}
+.ltl-summary{background:linear-gradient(135deg,var(--cyp),var(--s2));border:1.5px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.ltl-sum-label{font-family:var(--m);font-size:8px;color:var(--cyd);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.ltl-sum-text{font-size:13px;color:var(--tx);line-height:1.6;font-weight:600}
+.ltl-events{display:flex;flex-direction:column;gap:5px}
+.ltl-ev{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--t2);padding:5px 0;border-bottom:1px solid var(--s3)}
+.ltl-ev:last-child{border-bottom:none}
+.ltl-ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+/* LEAD FINDER */
+#v-finder{overflow:hidden}
+.finder-wrap{display:flex;flex:1;overflow:hidden}
+.finder-cfg{width:300px;min-width:300px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.finder-cfg-top{padding:16px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.finder-cfg-t{font-size:14px;font-weight:900;color:var(--cyd);margin-bottom:12px}
+.finder-field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.finder-label{font-size:9px;color:var(--t3);font-family:var(--m);letter-spacing:.5px;text-transform:uppercase}
+.finder-inp{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
+.finder-inp:focus{border-color:var(--cy)}
+.finder-sel{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
+.finder-log{flex:1;overflow-y:auto;padding:12px;font-family:var(--m);font-size:11px;color:var(--t2);line-height:1.8}
+.finder-log-line{padding:2px 0;border-bottom:1px solid var(--s3)}
+.finder-log-line.ok{color:var(--won)}.finder-log-line.warn{color:var(--warn)}.finder-log-line.info{color:var(--cyd)}
+.finder-results{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.fr-card{background:var(--s1);border:1.5px solid var(--bd);border-radius:13px;padding:14px;box-shadow:0 2px 8px rgba(62,198,240,.04);border-left:4px solid var(--bd)}
+.fr-card.score-urgent{border-left-color:var(--lost)}
+.fr-card.score-hot{border-left-color:var(--warn)}
+.fr-card.score-warm{border-left-color:var(--cyd)}
+.fr-card.imported{border-color:var(--won);background:rgba(34,181,115,.04)}
+.fr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.fr-nm{font-size:14px;font-weight:900;color:var(--tx)}
+.fr-sb{font-size:11px;color:var(--t3);margin-top:2px}
+.fr-score{font-size:22px;font-weight:900;flex-shrink:0;min-width:36px;text-align:right}
+.fr-tag.stars-hot{background:rgba(232,64,64,.1);color:var(--lost);border-color:rgba(232,64,64,.25)}
+.fr-tag.stars-warm{background:rgba(245,166,35,.1);color:var(--warn);border-color:rgba(245,166,35,.25)}
+.fr-tag.stars-ok{background:var(--s2);color:var(--t2)}
+.fr-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.fr-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--s2);color:var(--t2);border:1.5px solid var(--bd)}
+.fr-issue{font-size:12px;color:var(--t2);line-height:1.5;border-left:2px solid var(--bd);padding-left:9px;margin-bottom:10px}
+/* CALENDAR */
+#v-cal{overflow:hidden}
+.cal-wrap{display:flex;flex:1;overflow:hidden}
+.cal-side{width:290px;min-width:290px;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.cal-main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-shrink:0;border-bottom:1px solid var(--bd);background:var(--s1)}
+.cal-mo{font-size:16px;font-weight:900;color:var(--cyd)}
+.cal-nb{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--bd);background:transparent;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s;color:var(--t2)}
+.cal-nb:hover{background:var(--cyp);border-color:var(--cy);color:var(--cyd)}
+.cal-grid-wrap{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--bd);flex-shrink:0}
+.cal-dn{text-align:center;padding:8px 0;font-family:var(--m);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);flex:1}
+.cal-day{min-height:82px;border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:5px;cursor:pointer;transition:background .1s;position:relative}
+.cal-day:hover{background:var(--s2)}
+.cal-day.today{background:var(--cyp)}
+.cal-day.today .cal-dnum{background:var(--cy);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-day.other-mo{opacity:.35}
+.cal-day.has-ev{background:var(--cyxp)}
+.cal-dnum{font-size:12px;font-weight:800;color:var(--tx);margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-ev{font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.cal-ev.lead{background:rgba(62,198,240,.15);color:var(--cyd)}
+.cal-ev.alert{background:rgba(232,64,64,.12);color:var(--lost)}
+.cal-ev.note{background:rgba(34,181,115,.12);color:#15844f}
+.cal-ev.suggest{background:rgba(245,166,35,.12);color:#b47c00}
+.cal-ev.contract{background:rgba(14,127,171,.15);color:#0E7FAB}
+.cal-ev.more{background:var(--s3);color:var(--t3);font-size:9px}
+.cal-side-top{padding:14px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.cal-side-t{font-size:13px;font-weight:900;color:var(--cyd);margin-bottom:10px}
+.cal-tabs{display:flex;gap:6px;margin-bottom:10px}
+.cal-tab{padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);color:var(--t2);background:var(--s1);transition:all .13s}
+.cal-tab.on{background:var(--cy);color:#fff;border-color:var(--cy)}
+.cal-add-form{display:flex;flex-direction:column;gap:7px}
+.cal-inp{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%;transition:border-color .13s}
+.cal-inp:focus{border-color:var(--cy)}
+.cal-sel{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
+.cal-alerts{flex:1;overflow-y:auto;padding:10px}
+.cal-al-t{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;margin-top:4px}
+.cal-alert-item{display:flex;gap:8px;padding:8px 10px;border-radius:9px;margin-bottom:6px;cursor:pointer;border:1.5px solid transparent;transition:all .12s}
+.cal-alert-item:hover{border-color:var(--cy)}
+.cal-alert-item.urgent{background:rgba(232,64,64,.06);border-color:rgba(232,64,64,.2)}
+.cal-alert-item.warn{background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.2)}
+.cal-alert-item.info{background:rgba(62,198,240,.06)}
+.cal-ai-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.cal-ai-b{font-size:12px;font-weight:700;color:var(--tx);line-height:1.4}
+.cal-ai-s{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--m)}
+/* CONTRACT LIST */
+.contract-list{flex:1;overflow-y:auto;padding:10px}
+.contract-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;margin-bottom:5px;border:1.5px solid var(--bd);background:var(--s2);cursor:pointer;transition:all .12s}
+.contract-item:hover{border-color:var(--cy);background:var(--cyp)}
+.contract-dot{width:9px;height:9px;border-radius:50%;background:#0E7FAB;flex-shrink:0}
+.contract-nm{font-size:12px;font-weight:800;color:var(--tx)}
+.contract-freq{font-size:10px;color:var(--t3);font-family:var(--m)}
+.contract-del{margin-left:auto;width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(232,64,64,.3);background:transparent;color:var(--lost);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.contract-del:hover{background:var(--lost);color:#fff}
+/* DAY MODAL */
+.day-modal{position:fixed;inset:0;background:rgba(26,58,74,.4);backdrop-filter:blur(4px);z-index:600;display:none;align-items:center;justify-content:center;padding:20px}
+.day-modal.on{display:flex}
+.day-mo{background:var(--s1);border:1.5px solid var(--bd);border-radius:16px;width:440px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(62,198,240,.15)}
+.day-mh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--s1);border-radius:16px 16px 0 0;z-index:1}
+.day-mt{font-size:15px;font-weight:900;color:var(--cyd)}
+.day-ev-list{padding:14px 18px}
+.day-ev-item{display:flex;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .12s;border:1.5px solid var(--bd)}
+.day-ev-item:hover{border-color:var(--cy);background:var(--cyxp)}
+.day-ev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.day-ev-b{font-size:13px;font-weight:800;color:var(--tx)}
+.day-ev-s{font-size:11px;color:var(--t3);margin-top:2px}
+.day-ev-del{margin-left:auto;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(232,64,64,.3);background:transparent;color:var(--lost);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.day-ev-del:hover{background:var(--lost);color:#fff}
+/* LEAD MODAL */
+.mb{position:fixed;inset:0;background:rgba(26,58,74,.5);backdrop-filter:blur(6px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
+.mb.on{display:flex}
+.mo{background:var(--s1);border:1.5px solid var(--bd);border-radius:18px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 28px 65px rgba(62,198,240,.16)}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:linear-gradient(135deg,var(--s2),var(--s1));z-index:1;border-radius:18px 18px 0 0}
+.mt{font-size:15px;font-weight:900;color:var(--cyd)}
+.mbody{padding:17px 20px}
+.mfs{margin-bottom:14px}
+.mfst{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--cyd);font-family:var(--m);font-weight:600;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--cyp)}
+.mr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.mr1{margin-bottom:10px}
+.mg{display:flex;flex-direction:column;gap:4px}
+.ml{font-size:9px;color:var(--t3);font-family:var(--m);letter-spacing:.5px;text-transform:uppercase}
+.mi,.ms,.mta{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--tx);font-family:var(--f);outline:none;transition:border-color .13s;width:100%;font-weight:600}
+.mi:focus,.ms:focus,.mta:focus{border-color:var(--cy);background:var(--cyp)}
+.mta{min-height:76px;resize:vertical}
+.mft{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 15px;border-top:1px solid var(--bd);position:sticky;bottom:0;background:var(--s1);border-radius:0 0 18px 18px}
+.twrap{position:fixed;bottom:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--s1);border:1.5px solid var(--bd);border-radius:11px;padding:10px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:190px;animation:tIn .2s ease;box-shadow:0 10px 26px rgba(62,198,240,.16)}
+.toast.s{border-left:3px solid var(--won)}.toast.w{border-left:3px solid var(--warn)}.toast.i{border-left:3px solid var(--cy)}
+@keyframes tIn{from{transform:translateX(10px);opacity:0}to{transform:translateX(0);opacity:1}}
+.empty{padding:40px;text-align:center;color:var(--t3)}.ei{font-size:28px;margin-bottom:8px;opacity:.5}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="bbl" style="width:80px;height:80px;top:5%;left:88%;animation-duration:7s"></div>
+<div class="bbl" style="width:50px;height:50px;top:19%;left:3%;animation-duration:9s;animation-delay:-3s"></div>
+<div class="bbl" style="width:65px;height:65px;top:73%;left:92%;animation-duration:11s;animation-delay:-5s"></div>
+<div class="bbl" style="width:38px;height:38px;top:88%;left:10%;animation-duration:8s;animation-delay:-1s"></div>
+<div class="shell">
+<aside class="sb">
+  <div class="sb-top">
+    <div class="logo">BBM</div>
+    <div><div class="sb-nm">Big Blue Mop</div><div class="sb-tg">CRM Engine Room</div></div>
+  </div>
+  <div class="nav">
+    <div class="nl">Workspace</div>
+    <div class="ni on" id="ni-home" onclick="go('home')"><span class="ni-ic">&#9889;</span><span>Command Centre</span><span class="ni-badge" id="urgB" style="display:none"></span></div>
+    <div class="ni" id="ni-cal" onclick="go('cal')"><span class="ni-ic">&#128197;</span><span>Calendar</span></div>
+    <div class="ni" id="ni-kanban" onclick="go('kanban')"><span class="ni-ic">&#128203;</span><span>Lead Lifecycle</span></div>
+    <div class="ni" id="ni-leads" onclick="go('leads')"><span class="ni-ic">&#127919;</span><span>All Leads</span></div>
+    <div class="ni" id="ni-timeline" onclick="go('timeline')"><span class="ni-ic">&#9202;</span><span>Lead Timeline</span></div>
+    <div class="ni" id="ni-finder" onclick="go('finder')"><span class="ni-ic">&#128270;</span><span>Lead Finder</span></div>
+    <div class="ni" id="ni-templates" onclick="go('templates')"><span class="ni-ic">&#9993;</span><span>Email Templates</span></div>
+    <div class="nl">Intelligence</div>
+    <div class="ni" id="ni-intel" onclick="go('intel')"><span class="ni-ic">&#128269;</span><span>Perth Metro</span></div>
+    <div class="ni" id="ni-local" onclick="go('local')"><span class="ni-ic">&#128205;</span><span>Local Hitlist</span></div>
+    <div class="ni" id="ni-routes" onclick="go('routes')"><span class="ni-ic">&#128506;</span><span>Route Planner</span></div>
+  </div>
+  <div class="sb-bot">
+    <div class="sbt">Live Snapshot</div>
+    <div class="ss"><span class="ss-l">Active leads</span><span class="ss-v" style="color:var(--cy)" id="sb-a">-</span></div>
+    <div class="ss"><span class="ss-l">Revenue won</span><span class="ss-v" style="color:var(--won)" id="sb-r">-</span></div>
+    <div class="ss"><span class="ss-l">Replies pending</span><span class="ss-v" style="color:var(--lost)" id="sb-p">-</span></div>
+    <div class="ss"><span class="ss-l">Overdue</span><span class="ss-v" style="color:var(--warn)" id="sb-o">-</span></div>
+  </div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <div class="tb-ttl" id="ttl">Command Centre</div>
+    <div class="srch" id="srch"><span style="color:var(--t3);font-size:12px">&#128269;</span><input type="text" placeholder="Search leads..." id="sq" oninput="rl()"></div>
+    <button class="btn btn-gh btn-sm" id="expB" style="display:none" onclick="expCSV()">&#8595; CSV</button>
+    <button class="btn btn-gh btn-sm" onclick="oImport()" title="Import leads from morning briefing JSON">&#128229; Import JSON</button>
+    <button class="btn btn-cy btn-sm" onclick="oAdd()">+ Add Lead</button>
+  </header>
+  <div class="ca">
+    <!-- HOME -->
+    <div class="view on" id="v-home">
+      <div class="krow" id="kpiRow"></div>
+      <div class="hg">
+        <div class="panel"><div class="ph"><div class="pt"><div class="pld"></div>Needs Action<span id="acB" style="font-family:var(--m);font-size:11px;color:var(--t3);margin-left:6px"></span></div></div><div class="pb" id="acList"></div></div>
+        <div class="panel"><div class="ph"><div class="pt">&#128293; Top Uncontacted</div></div><div class="pb" id="topT"></div></div>
+        <div class="panel"><div class="ph"><div class="pt">Pipeline</div></div><div class="pb" id="pipeB"></div></div>
+      </div>
+    </div>
+    <!-- CALENDAR -->
+    <div class="view" id="v-cal">
+      <div class="cal-wrap">
+        <div class="cal-side">
+          <div class="cal-side-top">
+            <div class="cal-side-t">&#128197; Calendar Tools</div>
+            <div class="cal-tabs">
+              <div class="cal-tab on" id="caltab-add" onclick="switchCalTab('add')">Add Event</div>
+              <div class="cal-tab" id="caltab-contract" onclick="switchCalTab('contract')">Contracts</div>
+            </div>
+            <div id="calPane-add">
+              <div class="cal-add-form">
+                <input class="cal-inp" id="ev-title" placeholder="Event title or note...">
+                <input class="cal-inp" id="ev-date" type="date">
+                <select class="cal-sel" id="ev-type">
+                  <option value="note">General Note</option>
+                  <option value="lead">Lead Action</option>
+                  <option value="alert">Important Alert</option>
+                  <option value="suggest">Suggestion</option>
+                </select>
+                <button class="btn btn-cy btn-sm" onclick="addCalEv()" style="width:100%;justify-content:center">Add to Calendar</button>
+              </div>
+            </div>
+            <div id="calPane-contract" style="display:none">
+              <div class="cal-add-form">
+                <input class="cal-inp" id="ct-name" placeholder="Client or job name...">
+                <input class="cal-inp" id="ct-start" type="date">
+                <select class="cal-sel" id="ct-freq">
+                  <option value="weekly">Weekly</option>
+                  <option value="fortnightly">Fortnightly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                </select>
+                <input class="cal-inp" id="ct-note" placeholder="Notes (optional)">
+                <button class="btn btn-cy btn-sm" onclick="addContract()" style="width:100%;justify-content:center">Add Recurring Clean</button>
+              </div>
+            </div>
+          </div>
+          <div class="contract-list" id="contractList" style="display:none"></div>
+          <div class="cal-alerts" id="calAlerts"></div>
+        </div>
+        <div class="cal-main">
+          <div class="cal-nav">
+            <button class="cal-nb" onclick="calMove(-1)">&#8249;</button>
+            <div class="cal-mo" id="calMonthLabel"></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-gh btn-xs" onclick="calToday()">Today</button>
+              <button class="cal-nb" onclick="calMove(1)">&#8250;</button>
+            </div>
+          </div>
+          <div class="cal-dow">
+            <div class="cal-dn">Sun</div><div class="cal-dn">Mon</div><div class="cal-dn">Tue</div>
+            <div class="cal-dn">Wed</div><div class="cal-dn">Thu</div><div class="cal-dn">Fri</div><div class="cal-dn">Sat</div>
+          </div>
+          <div class="cal-grid-wrap"><div class="cal-days" id="calDays"></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- LEAD LIFECYCLE / KANBAN -->
+    <div class="view" id="v-kanban"><div class="kboard" id="kanban"></div></div>
+    <!-- ALL LEADS -->
+    <div class="view" id="v-leads">
+      <div class="fs" id="fstrip"></div>
+      <div class="tw"><table class="lt"><thead><tr><th>Business</th><th>Score</th><th>Stars</th><th>Reviews</th><th>Stage</th><th>Emails</th><th>Contact</th><th>Next Action</th><th>Quote</th><th></th></tr></thead><tbody id="ltb"></tbody></table></div>
+    </div>
+    <!-- LEAD TIMELINE -->
+    <div class="view" id="v-timeline">
+      <div class="ltl-bar">
+        <select id="ltl-sort" onchange="rTimeline()" style="margin-right:4px">
+          <option value="age">Sort by Age (oldest first)</option>
+          <option value="score">Sort by Score</option>
+          <option value="stage">Sort by Stage</option>
+          <option value="overdue">Overdue First</option>
+        </select>
+        <select id="ltl-filter" onchange="rTimeline()">
+          <option value="active">Active Only</option>
+          <option value="all">All Leads</option>
+          <option value="stale">Stale (14+ days)</option>
+          <option value="nocontact">No Contact Info</option>
+        </select>
+        <span id="ltl-count" style="font-family:var(--m);font-size:11px;color:var(--t3);margin-left:6px"></span>
+      </div>
+      <div class="ltl-list" id="ltlList"></div>
+    </div>
+    <!-- LEAD FINDER -->
+    <div class="view" id="v-finder">
+      <div class="finder-wrap">
+        <div class="finder-cfg">
+          <div class="finder-cfg-top">
+            <div class="finder-cfg-t">&#128270; Lead Finder</div>
+
+            <div class="finder-field">
+              <div class="finder-label">&#128273; Google Places API Key</div>
+              <input class="finder-inp" id="f-apikey" type="password" placeholder="AIzaSy..." autocomplete="off">
+              <div style="display:flex;gap:6px;margin-top:5px">
+                <button class="btn btn-gh btn-sm" onclick="saveFinderKey()" style="flex:1;justify-content:center;font-size:11px">Save Key</button>
+                <button class="btn btn-gh btn-sm" onclick="toggleKeyVis()" style="font-size:11px" id="keyVisBtn">Show</button>
+              </div>
+              <div id="keyStatus" style="font-size:10px;color:var(--t3);margin-top:4px;line-height:1.4">Key stored in localStorage — never leaves your browser.</div>
+            </div>
+
+            <div style="height:1px;background:var(--bd);margin:10px 0"></div>
+
+            <div class="finder-field">
+              <div class="finder-label">Suburbs to Scan</div>
+              <select class="finder-sel" id="f-suburbs-mode" onchange="toggleSuburbInput()">
+                <option value="preset">All 10 default suburbs</option>
+                <option value="custom">Custom suburb</option>
+              </select>
+              <input class="finder-inp" id="f-suburb-custom" placeholder="e.g. Mirrabooka" style="margin-top:6px;display:none">
+            </div>
+
+            <div class="finder-field">
+              <div class="finder-label">Business Type</div>
+              <select class="finder-sel" id="f-type">
+                <option value="shopping_mall">Shopping Centre</option>
+                <option value="doctor" selected>Medical Centre</option>
+                <option value="hospital">Hospital</option>
+                <option value="local_government_office">Government Office</option>
+                <option value="real_estate_agency">Strata / Real Estate</option>
+                <option value="all">All Types</option>
+              </select>
+            </div>
+
+            <div class="finder-field">
+              <div class="finder-label">Max Google Stars</div>
+              <select class="finder-sel" id="f-maxstars">
+                <option value="2.5">2.5 &#9733; and below</option>
+                <option value="3.0">3.0 &#9733; and below</option>
+                <option value="3.5">3.5 &#9733; and below</option>
+                <option value="4.0">4.0 &#9733; and below</option>
+                <option value="5.0" selected>Any rating</option>
+              </select>
+            </div>
+
+            <div class="finder-field">
+              <div class="finder-label">Min BBM Score</div>
+              <select class="finder-sel" id="f-minscore">
+                <option value="50" selected>50+ (Show all)</option>
+                <option value="60">60+ (Warm+)</option>
+                <option value="70">70+ (Hot+)</option>
+                <option value="80">80+ (Urgent only)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
+          </div>
+          <div class="finder-log" id="finderLog">
+            <div style="color:var(--t3);font-size:11px">Activity log will appear here when you run a scan...</div>
+          </div>
+        </div>
+        <div class="finder-results" id="finderResults">
+          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan to pull real Perth businesses</p></div>
+        </div>
+      </div>
+    </div>
+    <!-- EMAIL TEMPLATES -->
+    <div class="view" id="v-templates"><div class="tsl" id="tmplL"></div><div class="tp" id="tmplP"><div class="empty"><div class="ei">&#9993;</div><p>Select a template</p></div></div></div>
+    <!-- INTEL -->
+    <div class="view" id="v-intel">
+      <div class="iv-top"><div class="iv-h">Perth Metro Review Intelligence</div><div class="iv-d">34 businesses &middot; 6 zones &middot; 2,700+ reviews analysed</div><div class="iv-kpis" id="intelKPIs"></div></div>
+      <div class="itabs"><div class="itab on" onclick="showTab('intel','priority',this)">Priority Hit List</div><div class="itab" onclick="showTab('intel','timeline',this)">Zone Timeline</div><div class="itab" onclick="showTab('intel','zones',this)">Zone Analysis</div></div>
+      <div class="icont on" id="intel-priority"><div class="ic-grid" id="intelPri"></div></div>
+      <div class="icont" id="intel-timeline"></div>
+      <div class="icont" id="intel-zones"><div class="zgrid" id="intelZones"></div></div>
+    </div>
+    <!-- LOCAL -->
+    <div class="view" id="v-local">
+      <div class="iv-top"><div class="iv-h">Local Hitlist &mdash; Tuart Hill Nucleus</div><div class="iv-d">Closest targets first &middot; 3 drive rings &middot; Feb 2026</div><div class="iv-kpis" id="localKPIs"></div></div>
+      <div class="itabs"><div class="itab on" onclick="showTab('local','priority',this)">Priority Hit List</div><div class="itab" onclick="showTab('local','timeline',this)">Ring Timeline</div></div>
+      <div class="icont on" id="local-priority"><div class="ic-grid" id="localPri"></div></div>
+      <div class="icont" id="local-timeline"></div>
+    </div>
+    <!-- ROUTES -->
+    <div class="view" id="v-routes">
+      <div class="iv-top"><div class="iv-h">Walk-In Route Planner</div><div class="iv-d">3 batched routes &middot; Fuel efficient &middot; Pitch scripts included</div></div>
+      <div style="flex:1;overflow-y:auto;padding:18px"><div class="rgrid" id="routeGrid"></div></div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- DRAWERS + MODALS -->
+<div class="dpo" id="dpo" onclick="cdp()"></div>
+<div class="dpp" id="dpp">
+  <div class="dph"><div class="dph-t"><div class="dpn" id="dpn">-</div><button class="dpc" onclick="cdp()">&#10005;</button></div><div class="dpm" id="dpm"></div></div>
+  <div class="dpb" id="dpb"></div>
+  <div class="lb"><input class="li" id="li" placeholder="Log a call, note, email sent..." onkeydown="if(event.key==='Enter')dolog()"><button class="btn btn-cy btn-sm" onclick="dolog()">Log</button></div>
+  <div class="da" id="da"></div>
+</div>
+<div class="day-modal" id="dayModal">
+  <div class="day-mo">
+    <div class="day-mh"><div class="day-mt" id="dayModalTitle">Events</div><button class="dpc" onclick="document.getElementById('dayModal').classList.remove('on')">&#10005;</button></div>
+    <div class="day-ev-list" id="dayEvList"></div>
+  </div>
+</div>
+<div class="mb" id="modalBg">
+  <div class="mo">
+    <div class="mh"><div class="mt" id="mttl">Add Lead</div><button class="dpc" onclick="cModal()">&#10005;</button></div>
+    <div class="mbody">
+      <div class="mfs"><div class="mfst">Business Info</div>
+        <div class="mr2"><div class="mg"><label class="ml">Business Name *</label><input class="mi" id="f-name" placeholder="e.g. Nollamara Shopping Centre"></div><div class="mg"><label class="ml">Suburb</label><input class="mi" id="f-suburb"></div></div>
+        <div class="mr2"><div class="mg"><label class="ml">Type</label><select class="ms" id="f-type"><option value="">Select...</option><option>Shopping Centre</option><option>Medical Centre</option><option>Government Office</option><option>Commercial Centre</option><option>Serviced Office</option><option>Business Park</option><option>Strata Management</option><option>Aged Care</option><option>Employment Services</option><option>Retail / Commercial</option><option>Corporate Office</option><option>Office</option><option>Industrial</option><option>Other</option></select></div><div class="mg"><label class="ml">BBM Score (0-100)</label><input class="mi" id="f-score" type="number" min="0" max="100"></div></div>
+        <div class="mr2"><div class="mg"><label class="ml">Zone</label><input class="mi" id="f-zone"></div><div class="mg"><label class="ml">Address</label><input class="mi" id="f-address"></div></div>
+      </div>
+      <div class="mfs"><div class="mfst">Review Intelligence</div>
+        <div class="mr2"><div class="mg"><label class="ml">Google Stars</label><input class="mi" id="f-stars" type="number" step="0.1" min="1" max="5" placeholder="3.9"></div><div class="mg"><label class="ml">Review Count</label><input class="mi" id="f-reviews" type="number"></div></div>
+        <div class="mr1"><div class="mg"><label class="ml">Key Issue (from reviews)</label><input class="mi" id="f-keyissue" placeholder="e.g. Dirty toilets, staff complaints..."></div></div>
+      </div>
+      <div class="mfs"><div class="mfst">Contact Details</div>
+        <div class="mr2"><div class="mg"><label class="ml">Contact Name</label><input class="mi" id="f-contact" placeholder="Centre Manager"></div><div class="mg"><label class="ml">Phone</label><input class="mi" id="f-phone"></div></div>
+        <div class="mr1"><div class="mg"><label class="ml">Email</label><input class="mi" id="f-email" type="email"></div></div>
+      </div>
+      <div class="mfs"><div class="mfst">Lifecycle</div>
+        <div class="mr2"><div class="mg"><label class="ml">Stage</label><select class="ms" id="f-stage"><option>To Contact</option><option>Emailed</option><option>Opened</option><option>Replied</option><option>Visit Booked</option><option>Quoted</option><option>Won</option><option>Lost</option><option>On Hold</option></select></div><div class="mg"><label class="ml">Monthly Quote ($)</label><input class="mi" id="f-quote" type="number"></div></div>
+        <div class="mr2"><div class="mg"><label class="ml">Email 1 Sent</label><input class="mi" id="f-e1" type="date"></div><div class="mg"><label class="ml">Next Action Date</label><input class="mi" id="f-nextdate" type="date"></div></div>
+        <div class="mr1"><div class="mg"><label class="ml">Next Action</label><input class="mi" id="f-nextaction"></div></div>
+      </div>
+      <div class="mfs"><div class="mfst">Notes</div><div class="mr1"><div class="mg"><textarea class="mta" id="f-notes" placeholder="Intel, review analysis, pitch notes..."></textarea></div></div></div>
+    </div>
+    <div class="mft"><button class="btn btn-gh" onclick="cModal()">Cancel</button><button class="btn btn-cy" onclick="sLead()">Save Lead</button></div>
+  </div>
+</div>
+<div class="twrap" id="twrap"></div>
+<!-- IMPORT MODAL -->
+<div class="mb" id="importBg" style="display:none">
+  <div class="mo" style="max-width:560px">
+    <div class="mh"><div class="mt">&#128229; Import Leads from Morning Briefing</div><button class="dpc" onclick="cImport()">&#10005;</button></div>
+    <div class="mbody">
+      <p style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6">Open your <strong>BBM-Scripts</strong> folder, open the file <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px">bbm_new_leads_YYYY-MM-DD.json</code> in TextEdit, select all (Cmd+A), copy (Cmd+C), then paste below.</p>
+      <div class="mg" style="margin-bottom:12px">
+        <label class="ml">Paste JSON here</label>
+        <textarea class="mta" id="importJson" style="min-height:160px;font-family:monospace;font-size:11px" placeholder="Paste the contents of your bbm_new_leads_2026-02-24.json file here..."></textarea>
+      </div>
+      <div id="importPreview" style="display:none;padding:10px 14px;background:var(--cyp);border:1.5px solid var(--cyd);border-radius:8px;font-size:13px;margin-bottom:12px;line-height:1.7"></div>
+      <div id="importError" style="display:none;padding:10px 14px;background:rgba(232,64,64,.08);border:1.5px solid rgba(232,64,64,.25);border-radius:8px;font-size:13px;color:var(--lost);margin-bottom:12px"></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-gh" onclick="cImport()">Cancel</button>
+      <button class="btn btn-gh" onclick="previewImport()">&#128269; Preview</button>
+      <button class="btn btn-cy" id="importDoBtn" style="display:none" onclick="doImport()">&#128229; Import All New Leads</button>
+    </div>
+  </div>
+</div>
+<script>
+var SEED=[{"id": 1, "name": "Stirling Business Association", "suburb": "Stirling", "type": "Office", "score": 95, "contact": "SBA Manager", "phone": "", "email": "", "stage": "Won", "e1": "2025-03-01", "quote": 1745, "nextAction": "Monthly invoice", "nextDate": "2026-03-01", "notes": "Existing contract. $1,745/month. Tuesday & Friday after hours.", "address": "45 Delawney St Balcatta", "stars": null, "reviews": null, "zone": "Zone 1 \u2014 Inner North", "priority": "WON", "keyIssue": "", "activity": [{"t": "Contract signed", "d": "Apr 2025"}, {"t": "First clean completed", "d": "Apr 2025"}, {"t": "Client happy with checklist system", "d": "May 2025"}]}, {"id": 201, "name": "Nollamara Shopping Centre", "suburb": "Nollamara", "type": "Shopping Centre", "score": 78, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Send Email 1 - Pain Hook", "nextDate": "", "notes": "Multiple reviews: \u2019grotty centre\u2019, dirty toilets, \u2019rif raff\u2019. 441 reviews \u2014 largest pool in local dataset. 2 min from home.", "address": "78-90 Hillsborough Dr Nollamara", "stars": 4.0, "reviews": 441, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "2 min", "keyIssue": "\u2019Grotty centre\u2019, dirty toilets mentioned", "activity": []}, {"id": 202, "name": "Nollamara Medical Centre", "suburb": "Nollamara", "type": "Medical Centre", "score": 72, "contact": "Practice Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call \u2014 practice manager. Medical compliance pitch.", "nextDate": "2026-02-24", "notes": "536 reviews \u2014 highest in entire local dataset. Extremely busy bulk billing clinic. Cramped front desk. Medical = highest legal hygiene obligation.", "address": "82 Hillsborough Dr Nollamara", "stars": 4.4, "reviews": 536, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "3 min", "keyIssue": "536 reviews, high patient volume, compliance risk", "activity": []}, {"id": 203, "name": "Global Resource Support", "suburb": "Nollamara", "type": "Corporate Office", "score": 45, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold walk-in while in the Nollamara loop \u2014 low effort", "nextDate": "2026-03-07", "notes": "4 reviews, 3.5 stars. \u2019Going backward\u2019, \u2019unprofessional\u2019. Small corporate office \u2014 low contract value but 3 min from home.", "address": "18 Nollamara Ave Nollamara", "stars": 3.5, "reviews": 4, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "MEDIUM", "driveTime": "3 min", "keyIssue": "Declining reviews, \u2019going backward\u2019", "activity": []}, {"id": 204, "name": "Flinders Square", "suburb": "Yokine", "type": "Shopping Centre", "score": 82, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Send Email 1 - Pain Hook", "nextDate": "", "notes": "\u2019Coles seems dingy and smells funny.\u2019 \u2019Dirty toilets \u2014 to be expected.\u2019 296 reviews. KEY TARGET \u2014 4 min from home.", "address": "30 Wiluna St Yokine", "stars": 3.9, "reviews": 296, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "4 min", "keyIssue": "\u2019Coles smells funny\u2019, dirty toilets, dated", "activity": []}, {"id": 205, "name": "Services Australia Mirrabooka", "suburb": "Mirrabooka", "type": "Government Office", "score": 80, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government pitch \u2014 combine with Dept of Communities visit (same trip)", "nextDate": "2026-02-21", "notes": "2.7 stars / 58 reviews. Government procurement pathway. Batch with Dept of Communities \u2014 same Mirrabooka trip.", "address": "8 Sudbury Rd Mirrabooka", "stars": 2.7, "reviews": 58, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "HIGH", "driveTime": "7 min", "keyIssue": "2.7 stars, high-traffic govt office, management failures", "activity": []}, {"id": 206, "name": "Workskil Australia", "suburb": "Mirrabooka", "type": "Employment Services", "score": 76, "contact": "Building Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Find building owner for 22 Chesterfield Rd \u2014 one pitch, all tenants covered", "nextDate": "2026-02-21", "notes": "1.9 stars \u2014 lowest rated commercial office in this sweep. Shared building at 22 Chesterfield Rd. PITCH TO BUILDING MANAGER not Workskil.", "address": "Suite 5b/22 Chesterfield Rd Mirrabooka", "stars": 1.9, "reviews": 28, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "HIGH", "driveTime": "7 min", "keyIssue": "1.9 stars, building manager is the target", "activity": []}, {"id": 207, "name": "Dept of Communities Mirrabooka", "suburb": "Mirrabooka", "type": "Government Office", "score": 88, "contact": "Facilities Manager", "phone": "(08) 9222 2555", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 ask specifically for facilities/building manager. Government pitch.", "nextDate": "2026-02-21", "notes": "1.0 STARS \u2014 same department with raw sewage failures at Fremantle (scored 95 metro). URGENT. Government procurement pathway. Facilities manager is target, NOT counter staff.", "address": "5 Milldale Way Mirrabooka", "stars": 1.0, "reviews": 5, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "URGENT", "driveTime": "7 min", "keyIssue": "1.0 stars, same dept as Fremantle sewage failure", "activity": []}, {"id": 208, "name": "Chesterfield Commercial Centre", "suburb": "Mirrabooka", "type": "Commercial Centre", "score": 58, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Centre manager pitch. Multi-tenant = anchor contract.", "nextDate": "2026-03-07", "notes": "4.1 stars / 118 reviews. \u2019Some areas felt outdated, could use better maintenance.\u2019 DOT office inside. Same Mirrabooka trip.", "address": "1 Chesterfield Rd Mirrabooka", "stars": 4.1, "reviews": 118, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "MEDIUM", "driveTime": "7 min", "keyIssue": "Maintenance signal, multi-tenant hub", "activity": []}, {"id": 209, "name": "Dianella Family Medical Centre", "suburb": "Dianella", "type": "Medical Centre", "score": 74, "contact": "Practice Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Practice manager \u2014 compliance and documentation pitch", "nextDate": "2026-03-03", "notes": "195 reviews, 3.8 stars. \u2019Doctor marked patient as seen without seeing them.\u2019 Operational chaos = cleaning deprioritised. Medical compliance pitch.", "address": "294 Grand Promenade Dianella", "stars": 3.8, "reviews": 195, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "10 min", "keyIssue": "Operational chaos, compliance risk", "activity": []}, {"id": 210, "name": "Morley Gateway", "suburb": "Morley", "type": "Commercial Centre", "score": 70, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Declining centre pitch \u2014 same clean for less, no lock-in, prove it first month", "nextDate": "2026-03-07", "notes": "3.8 stars / 12 reviews. \u201950% of stores closed. Old, unfunctional.\u2019 Declining centre = manager under cost pressure.", "address": "60 Russell St Morley", "stars": 3.8, "reviews": 12, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "11 min", "keyIssue": "50% closed, declining, management under pressure", "activity": []}, {"id": 211, "name": "City of Bayswater Civic Centre", "suburb": "Morley", "type": "Government / Council", "score": 60, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Register on Tenders WA \u2014 facilities manager approach. Combine with Morley Gateway.", "nextDate": "2026-02-25", "notes": "3.6 stars / 62 reviews. \u2019Disgusting council.\u2019 Government procurement \u2014 register as supplier. Combine with Morley Gateway visit.", "address": "61 Broun Ave Morley", "stars": 3.6, "reviews": 62, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "MEDIUM", "driveTime": "11 min", "keyIssue": "\u2019Disgusting council\u2019, public complaints", "activity": []}, {"id": 212, "name": "Maylands Commercial Centre", "suburb": "Maylands", "type": "Commercial Centre", "score": 68, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Presentation + tenant attraction pitch \u2014 clean spaces lease faster", "nextDate": "2026-03-07", "notes": "3.6 stars / 24 reviews. \u2019Underutilised, many empty shopfronts.\u2019 Manager under pressure to attract tenants \u2014 clean common areas help.", "address": "168 Guildford Rd Maylands", "stars": 3.6, "reviews": 24, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "12 min", "keyIssue": "Empty shopfronts, centre under pressure", "activity": []}, {"id": 213, "name": "Brightwater Care Group HQ", "suburb": "Inglewood", "type": "Aged Care", "score": 55, "contact": "Operations Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Aged care compliance pitch \u2014 documented cleaning evidence for every site", "nextDate": "2026-03-07", "notes": "4.4 stars / 39 reviews. \u2019Gone downhill last 6 months \u2014 carers not turning up, overcharging.\u2019 Large aged care org managing multiple sites.", "address": "2A Walter Rd W Inglewood", "stars": 4.4, "reviews": 39, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "MEDIUM", "driveTime": "10 min", "keyIssue": "Operational decline signal, multiple sites", "activity": []}, {"id": 101, "name": "Regus Osborne Park", "suburb": "Osborne Park", "type": "Serviced Office", "score": 85, "contact": "Building Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 pitch local manager not head office", "nextDate": "2026-02-25", "notes": "3.1 stars / 22 reviews. Multiple 1-star re financial disputes. Facility mgmt poor. YOUR HOME SUBURB \u2014 walk in.", "address": "355 Scarborough Beach Rd", "stars": 3.1, "reviews": 22, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Hidden fees, bond not returned, dishonest charges", "activity": []}, {"id": 102, "name": "Garden Office Park", "suburb": "Osborne Park", "type": "Business Park", "score": 55, "contact": "Property Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Pitch on grounds and common area maintenance gaps", "nextDate": "2026-03-07", "notes": "4.2 stars / 46 reviews. Parking costs, pool never used. Multi-tenanted building.", "address": "355 Scarborough Beach Rd", "stars": 4.2, "reviews": 46, "zone": "Zone 1 \u2014 Inner North", "priority": "MEDIUM", "keyIssue": "Parking costs, pool never used", "activity": []}, {"id": 103, "name": "Integrity Business Centre", "suburb": "Osborne Park", "type": "Serviced Office", "score": 30, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Monitor \u2014 low priority unless cleaner changes", "nextDate": "2026-04-01", "notes": "4.5 stars / 19 reviews. Generally well-reviewed. Low priority.", "address": "67 Howe St", "stars": 4.5, "reviews": 19, "zone": "Zone 1 \u2014 Inner North", "priority": "LOW", "keyIssue": "Slow response times", "activity": []}, {"id": 104, "name": "Osborne Park Business Hub", "suburb": "Osborne Park", "type": "Business Hub", "score": 72, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold approach \u2014 ask about current cleaning provider", "nextDate": "2026-02-28", "notes": "2.4 stars / 5 reviews. Service and access failures. Never open weekends.", "address": "8 Collingwood St", "stars": 2.4, "reviews": 5, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Never open weekends, poor service", "activity": []}, {"id": 105, "name": "Chambers Franklyn Strata", "suburb": "Stirling", "type": "Strata Management", "score": 80, "contact": "Property Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call \u2014 approach property manager directly. Each managed property = potential BBM contract", "nextDate": "2026-02-25", "notes": "3.6 stars / 89 reviews. Ceiling falling for over a year, maintenance ignored. Multiple managed properties = multiple contracts.", "address": "47 Cedric St Stirling", "stars": 3.6, "reviews": 89, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Ceiling falling for over a year, maintenance ignored", "activity": []}, {"id": 106, "name": "Officeworks Joondalup", "suburb": "Joondalup", "type": "Retail / Commercial", "score": 90, "contact": "Store Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call store manager \u2014 sick day/hygiene data pitch. TOP TARGET.", "nextDate": "2026-02-24", "notes": "2.4 stars / 743 reviews. \u2019Absolute joke. Understaffed, slow.\u2019 One of highest review volumes in dataset. Systemic management failures.", "address": "15 Dwyer Turn Joondalup", "stars": 2.4, "reviews": 743, "zone": "Zone 2 \u2014 North", "priority": "HIGH", "keyIssue": "Understaffed, slow, wrong prices, poor management", "activity": []}, {"id": 107, "name": "Services Australia Joondalup", "suburb": "Joondalup", "type": "Government Office", "score": 50, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government procurement \u2014 register as supplier. High-traffic public space.", "nextDate": "2026-03-14", "notes": "3.5 stars / 130 reviews. Rude staff, long waits. Government procurement process applies.", "address": "11 Boas Ave Joondalup", "stars": 3.5, "reviews": 130, "zone": "Zone 2 \u2014 North", "priority": "MEDIUM", "keyIssue": "Rude staff, long waits", "activity": []}, {"id": 108, "name": "Department of Communities", "suburb": "Fremantle", "type": "Government Office", "score": 95, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "CALL FACILITIES MANAGER IMMEDIATELY \u2014 raw sewage complaints on record", "nextDate": "2026-02-22", "notes": "1.5 stars / 17 reviews. \u2019Forced to relive trauma in apartment flooded with RAW SEWERAGE.\u2019 HIGHEST PRIORITY IN ENTIRE DATASET. Government \u2014 procurement pathway available.", "address": "5 Newman Ct Fremantle", "stars": 1.5, "reviews": 17, "zone": "Zone 4 \u2014 South", "priority": "URGENT", "keyIssue": "Raw sewage flooding, neglect, no accountability", "activity": []}, {"id": 109, "name": "Leeuwin Estate Perth Office", "suburb": "Fremantle", "type": "Corporate / Hospitality", "score": 70, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Premium brand pitch \u2014 presentation and brand protection angle", "nextDate": "2026-03-07", "notes": "3.0 stars / 6 reviews. Turned away, dismissive service. Premium brand reputation at risk.", "address": "18 High St Fremantle", "stars": 3.0, "reviews": 6, "zone": "Zone 4 \u2014 South", "priority": "HIGH", "keyIssue": "Dismissive service, turned away customers", "activity": []}, {"id": 110, "name": "Department of Transport Midland", "suburb": "Midland", "type": "Government Office", "score": 86, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government procurement \u2014 register as supplier. Largest review pool in dataset.", "nextDate": "2026-02-25", "notes": "3.2 stars / 475 reviews \u2014 LARGEST review pool in entire dataset. \u2019Furniture is very worn, far from comfortable \u2014 people napping while they wait.\u2019", "address": "5 Clayton St Midland", "stars": 3.2, "reviews": 475, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Understaffed, worn furniture, very long waits", "activity": []}, {"id": 111, "name": "Officeworks Midland", "suburb": "Midland", "type": "Retail / Commercial", "score": 88, "contact": "Store Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "If you land Joondalup Officeworks, use as reference for this location. Same chain.", "nextDate": "2026-02-28", "notes": "3.1 stars / 365 reviews. \u2019Incredibly unreliable, absolute regret.\u2019 Disorganised, orders lost. Same chain as Joondalup \u2014 one reference gets you both.", "address": "4 Clayton St Midland", "stars": 3.1, "reviews": 365, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Unreliable, disorganised, wrong products", "activity": []}, {"id": 112, "name": "City of Swan Administration", "suburb": "Midland", "type": "Government / Council", "score": 82, "contact": "Facilities Department", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Council procurement \u2014 documented waste and cleanliness failures publicly on record", "nextDate": "2026-02-28", "notes": "3.1 stars / 31 reviews. \u2019Crushed asbestos dumped on street \u2014 told it was cleaned \u2014 it was a lie.\u2019 Waste management failures documented publicly.", "address": "2 Midland Square", "stars": 3.1, "reviews": 31, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Asbestos not cleaned, bin complaints, no follow through", "activity": []}, {"id": 113, "name": "Midland Business Centre", "suburb": "Midland", "type": "Business Centre", "score": 75, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 someone literally wrote this place needs sprucing up. Direct pitch.", "nextDate": "2026-02-27", "notes": "4.0 stars / 4 reviews. \u2019It\u2019s ok. A bit of sprucing up would be nice.\u2019 DIRECT INVITATION.", "address": "24 Victoria St Midland", "stars": 4.0, "reviews": 4, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Needs sprucing up \u2014 direct quote", "activity": []}, {"id": 114, "name": "C88 International Corporate", "suburb": "Perth CBD", "type": "Corporate Office", "score": 65, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold approach \u2014 professional misconduct and misleading info in reviews", "nextDate": "2026-03-07", "notes": "3.7 stars / 6 reviews. Professional misconduct, misleading info flagged in reviews.", "address": "224 Stirling St Perth", "stars": 3.7, "reviews": 6, "zone": "Zone 3 \u2014 CBD / West", "priority": "HIGH", "keyIssue": "Professional misconduct, misleading info", "activity": []}];
+var STAGES=["To Contact","Emailed","Opened","Replied","Visit Booked","Quoted","Won","Lost","On Hold"];
+var SC={"To Contact":"#3EC6F0","Emailed":"#8B93D6","Opened":"#F5A623","Replied":"#22B573","Visit Booked":"#1AA8D4","Quoted":"#0E7FAB","Won":"#22B573","Lost":"#E84040","On Hold":"#F5A623"};
+var SB={"To Contact":"rgba(62,198,240,.1)","Emailed":"rgba(139,147,214,.1)","Opened":"rgba(245,166,35,.1)","Replied":"rgba(34,181,115,.1)","Visit Booked":"rgba(26,168,212,.1)","Quoted":"rgba(14,127,171,.1)","Won":"rgba(34,181,115,.14)","Lost":"rgba(232,64,64,.11)","On Hold":"rgba(245,166,35,.09)"};
+var leads=JSON.parse(localStorage.getItem("bbm12")||"null");
+if(!leads){leads=SEED.map(function(x){return Object.assign({},x,{activity:(x.activity||[]).slice(),createdAt:x.createdAt||new Date().toISOString().slice(0,10)});});}
+var calEvents=JSON.parse(localStorage.getItem("bbm12-cal")||"[]");
+var contracts=JSON.parse(localStorage.getItem("bbm12-contracts")||"[]");
+var nid=Math.max.apply(null,leads.map(function(l){return l.id;}))+1;
+var eid=null,openId=null,aF="All",aTmpl=0;
+var calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+function persist(){localStorage.setItem("bbm12",JSON.stringify(leads));}
+function persistCal(){localStorage.setItem("bbm12-cal",JSON.stringify(calEvents));}
+function persistContracts(){localStorage.setItem("bbm12-contracts",JSON.stringify(contracts));}
+function fd(d){if(!d)return"Not set";return new Date(d+"T00:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short"});}
+function fdt(d){if(!d)return"";return new Date(d+"T00:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});}
+function over(d){if(!d)return false;var t=new Date();t.setHours(0,0,0,0);return new Date(d+"T00:00:00")<t;}
+function addDays(d,n){var base=typeof d==="string"?new Date(d+"T00:00:00"):new Date(d);base.setDate(base.getDate()+n);return base;}
+function fmtD(d){return d.toLocaleDateString("en-AU",{day:"numeric",month:"short"});}
+function toISO(d){var dd=d instanceof Date?d:new Date(d);return dd.toISOString().slice(0,10);}
+function daysAgo(iso){if(!iso)return null;var d=new Date(iso+"T00:00:00"),t=new Date();t.setHours(0,0,0,0);return Math.round((t-d)/864e5);}
+function sco(s){s=s||0;if(s>=80)return"var(--lost)";if(s>=65)return"var(--warn)";return"var(--cyd)";}
+function scBg(s){s=s||0;if(s>=80)return"rgba(232,64,64,.1)";if(s>=65)return"rgba(245,166,35,.1)";return"rgba(62,198,240,.1)";}
+function scCls(s){return s>=75?"hot":s>=55?"warm":"cold";}
+function starCol(r){return r<=2.5?"hot":r<=3.5?"warm":"cold";}
+function edone(l){if(!l.e1)return 0;var d=(new Date()-new Date(l.e1+"T00:00:00"))/864e5;return d>=12?4:d>=8?3:d>=4?2:1;}
+function pill(st,sm){var c=SC[st]||"#6a8aaa",bg=SB[st]||"rgba(106,138,170,.1)";var sz=sm?"font-size:10px;padding:2px 8px":"font-size:11px;padding:3px 10px";return'<span class="sp" style="'+sz+';background:'+bg+';color:'+c+'"><span class="spd" style="background:'+c+'"></span>'+e(st)+"</span>";}
+function chip(s){if(s==null)return'<span class="sc" style="background:rgba(106,138,170,.1);color:var(--t3)">-</span>';return'<span class="sc" style="background:'+scBg(s)+';color:'+sco(s)+'">'+s+"</span>";}
+function edots(l){var d=edone(l),h='<div class="ed">';for(var i=1;i<=4;i++)h+='<div class="edot" style="background:'+(i<=d?"var(--cy)":"var(--s3)")+'"></div>';return h+"</div>";}
+function e(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function usb(){
+  var won=leads.filter(function(l){return l.stage==="Won";});
+  var rev=won.reduce(function(s,l){return s+(l.quote||0);},0);
+  var act=leads.filter(function(l){return l.stage!=="Won"&&l.stage!=="Lost";}).length;
+  var rep=leads.filter(function(l){return l.stage==="Replied";}).length;
+  var od=leads.filter(function(l){return over(l.nextDate)&&l.stage!=="Won"&&l.stage!=="Lost"&&l.nextDate;}).length;
+  document.getElementById("sb-a").textContent=act;
+  document.getElementById("sb-r").textContent="$"+rev.toLocaleString();
+  document.getElementById("sb-p").textContent=rep;
+  document.getElementById("sb-o").textContent=od;
+  var urg=rep+od,b=document.getElementById("urgB");
+  b.textContent=urg;b.style.display=urg>0?"":"none";
+}
+function go(v){
+  document.querySelectorAll(".view").forEach(function(el){el.classList.remove("on");});
+  document.querySelectorAll(".ni[id]").forEach(function(el){el.classList.remove("on");});
+  var ve=document.getElementById("v-"+v);if(ve)ve.classList.add("on");
+  var ne=document.getElementById("ni-"+v);if(ne)ne.classList.add("on");
+  var titles={home:"Command Centre",cal:"Calendar",kanban:"Lead Lifecycle",leads:"All Leads",timeline:"Lead Timeline",finder:"Lead Finder",templates:"Email Templates",intel:"Perth Metro Intelligence",local:"Local Hitlist",routes:"Route Planner"};
+  document.getElementById("ttl").textContent=titles[v]||v;
+  document.getElementById("srch").style.display=v==="leads"?"flex":"none";
+  document.getElementById("expB").style.display=v==="leads"?"inline-flex":"none";
+  if(v==="home")rHome();
+  if(v==="cal")rCal();
+  if(v==="kanban")rKanban();
+  if(v==="leads")rl();
+  if(v==="timeline")rTimeline();
+  if(v==="templates")rTmpls();
+  if(v==="intel")rIntel();
+  if(v==="local")rLocal();
+  if(v==="routes")rRoutes();
+}
+function rHome(){
+  usb();
+  var won=leads.filter(function(l){return l.stage==="Won";});
+  var rev=won.reduce(function(s,l){return s+(l.quote||0);},0);
+  var act=leads.filter(function(l){return l.stage!=="Won"&&l.stage!=="Lost";});
+  var rep=leads.filter(function(l){return l.stage==="Replied";});
+  var od=leads.filter(function(l){return over(l.nextDate)&&l.stage!=="Won"&&l.stage!=="Lost"&&l.nextDate;});
+  var quoted=leads.filter(function(l){return l.stage==="Quoted";});
+  var urg=leads.filter(function(l){return l.priority==="URGENT"&&l.stage==="To Contact";});
+  document.getElementById("kpiRow").innerHTML=
+    mkKpi("var(--cyd)","Total Leads",leads.length,act.length+" active","leads")+
+    mkKpi("var(--won)","Revenue Won","$"+rev.toLocaleString(),won.length+" contracts/mo","leads")+
+    mkKpi("var(--warn)","Replies Waiting",rep.length,"Respond within 4 hours","")+
+    mkKpi("var(--lost)","Overdue",od.length,"Need attention now","timeline")+
+    mkKpi("#1AA8D4","Quotes Pending",quoted.length,"$"+quoted.reduce(function(s,l){return s+(l.quote||0);},0).toLocaleString()+" out","")+
+    mkKpi("var(--lost)","Urgent Targets",urg.length,"Uncontacted","local");
+  var actions=[];
+  rep.forEach(function(l){actions.push(Object.assign({},l,{urg:"now",task:"Reply received. Respond now."}));});
+  od.filter(function(l){return l.stage!=="Replied";}).forEach(function(l){actions.push(Object.assign({},l,{urg:"today",task:l.nextAction||"Follow up"}));});
+  actions.sort(function(a,b){return a.urg==="now"?-1:1;});actions=actions.slice(0,10);
+  document.getElementById("acB").textContent=actions.length?"("+actions.length+")":"";
+  document.getElementById("acList").innerHTML=actions.length?actions.map(function(l){
+    return'<div class="ar" onclick="od2('+l.id+')"><div class="as" style="background:'+(l.urg==="now"?"var(--lost)":"var(--warn)")+'"></div><div class="am"><div class="ab">'+e(l.name)+'</div><div class="at">'+e(l.task)+'</div><div class="ad">'+e(l.suburb||"")+(l.type?" &middot; "+e(l.type):"")+'</div></div><div class="ar-r"><span class="ug u-'+l.urg+'">'+(l.urg==="now"?"NOW":"TODAY")+"</span>"+(l.nextDate?'<span style="font-size:10px;color:var(--t3);font-family:var(--m)">'+fd(l.nextDate)+"</span>":"")+"</div></div>";
+  }).join(""):'<div class="empty"><div class="ei">&#9989;</div><p>All clear</p></div>';
+  var topU=leads.filter(function(l){return l.stage==="To Contact"&&(l.score||0)>=65;}).sort(function(a,b){return(b.score||0)-(a.score||0);}).slice(0,8);
+  document.getElementById("topT").innerHTML=topU.map(function(l){
+    return'<div class="ar" onclick="od2('+l.id+')"><div class="as" style="background:'+sco(l.score)+'"></div><div class="am"><div class="ab">'+e(l.name)+'</div><div class="at">'+e(l.nextAction||"Contact this target")+'</div><div class="ad">'+e(l.suburb||"")+(l.zone?" &middot; "+e(l.zone):"")+"</div></div>"+'<div class="ar-r">'+chip(l.score)+(l.stars!=null?'<span style="font-size:10px;color:var(--t3)">&starf; '+l.stars+"</span>":"")+"</div></div>";
+  }).join("");
+  var mx=1;STAGES.forEach(function(s){var ct=leads.filter(function(l){return l.stage===s;}).length;if(ct>mx)mx=ct;});
+  document.getElementById("pipeB").innerHTML=STAGES.map(function(s){
+    var ct=leads.filter(function(l){return l.stage===s;}).length;if(!ct)return"";
+    return'<div class="ppr" onclick="setF(\''+s+'\');go(\'leads\')"><div class="ppn" style="color:'+SC[s]+'">'+s+'</div><div class="ppt"><div class="ppf" style="width:'+(ct/mx*100)+'%;background:'+SC[s]+'"></div></div><div class="ppc">'+ct+"</div></div>";
+  }).join("");
+}
+function mkKpi(kc,label,val,sub,nav){return'<div class="kpi" style="--kc:'+kc+'"'+(nav?' onclick="go(\''+nav+'\')"':"")+'>'+
+  '<div class="kl">'+label+'</div><div class="kv">'+val+'</div><div class="ks">'+sub+"</div></div>";}
+
+/* ===== LEAD TIMELINE ===== */
+function getAgeSummary(l){
+  var today=new Date();today.setHours(0,0,0,0);
+  var created=l.createdAt?new Date(l.createdAt+"T00:00:00"):null;
+  var age=created?Math.round((today-created)/864e5):null;
+  var lastAct=l.activity&&l.activity.length?l.activity[l.activity.length-1]:null;
+  var daysSinceAct=lastAct?null:null;
+  var overdueBy=l.nextDate&&over(l.nextDate)?Math.round((today-new Date(l.nextDate+"T00:00:00"))/864e5):0;
+  var noContact=!l.phone&&!l.email&&!l.contact;
+  var stale=l.e1&&(today-new Date(l.e1+"T00:00:00"))/864e5>14&&l.stage==="Emailed";
+
+  var summary="";
+  var urgency="cold";
+
+  if(l.stage==="Won"){
+    summary="This is a current client. Keep the relationship strong. Check in monthly and document every clean.";
+    urgency="cold";
+  } else if(l.stage==="Lost"){
+    summary="Marked as lost. Worth revisiting in 3 months if circumstances change.";
+    urgency="cold";
+  } else if(l.stage==="Replied"){
+    summary="They replied. This is your hottest window. Get back to them today and move toward a visit or quote. Every hour you wait makes a lost deal more likely.";
+    urgency="hot";
+  } else if(l.stage==="Visit Booked"){
+    summary="Visit is on. Prepare your checklist and cleaning audit sheet. Arrive early, dress well and lead with documented proof not just promises.";
+    urgency="hot";
+  } else if(l.stage==="Quoted"){
+    summary="You have sent a quote. If more than 5 days have passed with no response, follow up now. A short friendly nudge often makes the difference.";
+    urgency=overdueBy>0?"hot":"warm";
+  } else if(noContact&&l.stage==="To Contact"){
+    summary="No contact details on file yet. This lead cannot be actioned until you find a phone number or email. Search their Google listing, LinkedIn or call the main reception to get a name.";
+    urgency="warm";
+  } else if(overdueBy>3){
+    summary="This action is "+overdueBy+" days overdue. The longer this sits the colder it gets. Either do it now or reschedule to a realistic date.";
+    urgency="hot";
+  } else if(stale){
+    summary="Emailed "+Math.round((today-new Date(l.e1+"T00:00:00"))/864e5)+" days ago with no movement. Time to either call them directly or move to email 2. Do not let this go cold.";
+    urgency="warm";
+  } else if(l.stage==="To Contact"){
+    var sc=l.score||0;
+    if(sc>=80)summary="Top priority target. Score of "+sc+" means dirty facility, high review volume and a likely active pain point. First contact this week.";
+    else if(sc>=65)summary="Solid target. Score "+sc+". Good fit for BBM. Get email 1 out and follow the sequence.";
+    else summary="Lower priority but worth a contact. Send email 1 when the higher scores are actioned.";
+    urgency=sc>=80?"hot":sc>=65?"warm":"cold";
+  } else if(l.stage==="Emailed"){
+    var daysE=l.e1?Math.round((today-new Date(l.e1+"T00:00:00"))/864e5):0;
+    if(daysE<4)summary="Email 1 was sent recently. Let it sit until day 4 before sending email 2.";
+    else if(daysE<8)summary="Day "+daysE+". Time for email 2. Keep it short and reference your first note.";
+    else if(daysE<12)summary="Day "+daysE+". Send email 3 or consider calling. Two emails with no open means they may not be reading them.";
+    else summary="Past the 12 day mark. Send email 4 or close the sequence and try a phone call instead.";
+    urgency=daysE>=8?"warm":"cold";
+  } else {
+    summary="No specific recommendation right now. Check the next action date and make sure it is realistic.";
+  }
+  return{summary:summary,urgency:urgency,age:age};
+}
+function rTimeline(){
+  var sort=document.getElementById("ltl-sort").value;
+  var filter=document.getElementById("ltl-filter").value;
+  var today=new Date();today.setHours(0,0,0,0);
+  var list=leads.slice();
+  if(filter==="active")list=list.filter(function(l){return l.stage!=="Won"&&l.stage!=="Lost";});
+  else if(filter==="stale")list=list.filter(function(l){return l.e1&&(today-new Date(l.e1+"T00:00:00"))/864e5>14&&l.stage==="Emailed";});
+  else if(filter==="nocontact")list=list.filter(function(l){return !l.phone&&!l.email&&!l.contact;});
+  if(sort==="age")list.sort(function(a,b){var da=a.createdAt||"9999",db=b.createdAt||"9999";return da.localeCompare(db);});
+  else if(sort==="score")list.sort(function(a,b){return(b.score||0)-(a.score||0);});
+  else if(sort==="stage")list.sort(function(a,b){return STAGES.indexOf(a.stage)-STAGES.indexOf(b.stage);});
+  else if(sort==="overdue")list.sort(function(a,b){var oa=over(a.nextDate)?-1:1,ob=over(b.nextDate)?-1:1;return oa-ob;});
+  document.getElementById("ltl-count").textContent=list.length+" leads";
+  if(!list.length){document.getElementById("ltlList").innerHTML='<div class="empty"><div class="ei">&#9202;</div><p>No leads match this filter</p></div>';return;}
+  document.getElementById("ltlList").innerHTML=list.map(function(l){
+    var info=getAgeSummary(l);
+    var ageColor=info.urgency==="hot"?"var(--lost)":info.urgency==="warm"?"var(--warn)":"var(--cyd)";
+    var ageFill=info.age!=null?Math.min(100,info.age/60*100):10;
+    var stageStr=l.stage+(l.nextDate?" &middot; Due "+fd(l.nextDate):"");
+    var contactBadge=(!l.phone&&!l.email)?'<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;background:rgba(245,166,35,.15);color:var(--warn);margin-left:6px">No contact</span>':"";
+    var overdueTag=over(l.nextDate)?'<span style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;background:rgba(232,64,64,.12);color:var(--lost)">Overdue</span>':"";
+    return'<div class="ltl-card">'
+      +'<div class="ltl-head" onclick="ltlTog(this)">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-size:14px;font-weight:900;color:var(--tx)">'+e(l.name)+'</span>'
+      +overdueTag+contactBadge
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:3px">'+e(l.suburb||"")+(l.type?" &middot; "+e(l.type):"")+" &middot; "+stageStr+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">'
+      +chip(l.score)
+      +'<div style="text-align:right;font-family:var(--m);font-size:9px;color:var(--t3)">'+(info.age!=null?info.age+"d old":"New")+'</div>'
+      +'<div class="ltl-age-bar"><div class="ltl-age-fill" style="width:'+ageFill+'%;background:'+ageColor+'"></div></div>'
+      +'</div>'
+      +'</div>'
+      +'<div class="ltl-body">'
+      +'<div class="ltl-summary"><div class="ltl-sum-label">Today\u2019s Recommendation</div><div class="ltl-sum-text">'+e(info.summary)+'</div></div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+      +'<button class="btn btn-cy btn-sm" onclick="od2('+l.id+')">Open Lead</button>'
+      +'<button class="btn btn-gh btn-sm" onclick="oEdit('+l.id+')">Edit</button>'
+      +(l.phone?'<a class="btn btn-gh btn-sm" href="tel:'+l.phone+'">Call</a>':'')+
+      (l.email?'<a class="btn btn-gh btn-sm" href="mailto:'+l.email+'">Email</a>':'')+
+      '</div>'
+      +(l.activity&&l.activity.length?'<div style="font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px">Activity Log</div>'
+      +'<div class="ltl-events">'
+      +l.activity.slice().reverse().slice(0,5).map(function(a){return'<div class="ltl-ev"><div class="ltl-ev-dot" style="background:var(--cy)"></div><div><div style="font-size:12px;font-weight:700;color:var(--tx)">'+e(a.t)+'</div><div style="font-size:10px;color:var(--t3);font-family:var(--m)">'+e(a.d)+'</div></div></div>';}).join("")
+      +'</div>':'<div style="color:var(--t3);font-size:12px">No activity logged yet.</div>')
+      +'</div>'
+      +'</div>';
+  }).join("");
+}
+function ltlTog(head){
+  var body=head.parentElement.querySelector(".ltl-body");
+  body.classList.toggle("on");
+}
+
+/* ===== LEAD FINDER ===== */
+
+// ═══════════════════════════════════════════
+//  LEAD FINDER — LIVE GOOGLE PLACES API
+// ═══════════════════════════════════════════
+
+var FINDER_KEY_STORAGE = 'bbm12-gkey';
+var finderImported = {};
+var finderPool = [];
+
+var FINDER_SUBURBS = [
+  {name:'Mirrabooka',   lat:-31.8558, lng:115.8697},
+  {name:'Nollamara',    lat:-31.8700, lng:115.8600},
+  {name:'Balga',        lat:-31.8450, lng:115.8580},
+  {name:'Westminster',  lat:-31.8530, lng:115.8440},
+  {name:'Osborne Park', lat:-31.8900, lng:115.8270},
+  {name:'Stirling',     lat:-31.8650, lng:115.8420},
+  {name:'Morley',       lat:-31.8900, lng:115.9100},
+  {name:'Dianella',     lat:-31.8750, lng:115.8830},
+  {name:'Yokine',       lat:-31.8960, lng:115.8640},
+  {name:'Inglewood',    lat:-31.9100, lng:115.8720},
+];
+
+// Load saved API key on page load
+document.addEventListener('DOMContentLoaded', function(){
+  var saved = localStorage.getItem(FINDER_KEY_STORAGE);
+  if(saved){
+    document.getElementById('f-apikey').value = saved;
+    document.getElementById('keyStatus').textContent = '✓ Key loaded from storage.';
+    document.getElementById('keyStatus').style.color = 'var(--won)';
+  }
+});
+
+function saveFinderKey(){
+  var k = document.getElementById('f-apikey').value.trim();
+  if(!k){toast('Paste your API key first','w'); return;}
+  localStorage.setItem(FINDER_KEY_STORAGE, k);
+  document.getElementById('keyStatus').textContent = '✓ Key saved to localStorage.';
+  document.getElementById('keyStatus').style.color = 'var(--won)';
+  toast('API key saved','s');
+}
+
+function toggleKeyVis(){
+  var inp = document.getElementById('f-apikey');
+  var btn = document.getElementById('keyVisBtn');
+  if(inp.type === 'password'){
+    inp.type = 'text'; btn.textContent = 'Hide';
+  } else {
+    inp.type = 'password'; btn.textContent = 'Show';
+  }
+}
+
+function toggleSuburbInput(){
+  var mode = document.getElementById('f-suburbs-mode').value;
+  var custom = document.getElementById('f-suburb-custom');
+  custom.style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+function finderScoreLead(rating, reviewCount, types){
+  var score = 0;
+  rating = rating || 5;
+  reviewCount = reviewCount || 0;
+  // Rating score
+  if(rating <= 2.0) score += 35;
+  else if(rating <= 2.5) score += 30;
+  else if(rating <= 3.0) score += 25;
+  else if(rating <= 3.5) score += 18;
+  else if(rating <= 3.8) score += 10;
+  else if(rating <= 4.0) score += 5;
+  // Review volume
+  if(reviewCount >= 500) score += 25;
+  else if(reviewCount >= 200) score += 20;
+  else if(reviewCount >= 100) score += 15;
+  else if(reviewCount >= 50) score += 10;
+  else if(reviewCount >= 20) score += 5;
+  // Type bonus
+  types = types || [];
+  if(types.indexOf('shopping_mall') > -1) score += 20;
+  if(types.indexOf('hospital') > -1) score += 18;
+  if(types.indexOf('local_government_office') > -1) score += 15;
+  if(types.indexOf('doctor') > -1) score += 12;
+  if(types.indexOf('real_estate_agency') > -1) score += 8;
+  return Math.min(100, score);
+}
+
+function finderMapType(types){
+  if(!types) return 'Commercial';
+  if(types.indexOf('shopping_mall') > -1) return 'Shopping Centre';
+  if(types.indexOf('hospital') > -1) return 'Medical Centre';
+  if(types.indexOf('doctor') > -1) return 'Medical Centre';
+  if(types.indexOf('local_government_office') > -1) return 'Government Office';
+  if(types.indexOf('real_estate_agency') > -1) return 'Strata Management';
+  return 'Commercial';
+}
+
+function finderLog(msg, cls){
+  var log = document.getElementById('finderLog');
+  var div = document.createElement('div');
+  div.className = 'finder-log-line ' + (cls||'info');
+  div.textContent = '> ' + msg;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function runFinder(){
+  var apiKey = document.getElementById('f-apikey').value.trim();
+  if(!apiKey){
+    toast('Add your Google API key first — paste it in the API Key field above','w');
+    return;
+  }
+
+  var mode = document.getElementById('f-suburbs-mode').value;
+  var suburbsToScan;
+  if(mode === 'custom'){
+    var customVal = document.getElementById('f-suburb-custom').value.trim();
+    if(!customVal){toast('Enter a suburb name','w'); return;}
+    suburbsToScan = [{name: customVal, lat: -31.9505, lng: 115.8605}]; // default Perth centre if unknown
+  } else {
+    suburbsToScan = FINDER_SUBURBS;
+  }
+
+  var type = document.getElementById('f-type').value;
+  var maxStars = parseFloat(document.getElementById('f-maxstars').value);
+  var minScore = parseInt(document.getElementById('f-minscore').value);
+
+  var btn = document.getElementById('finderRunBtn');
+  btn.innerHTML = '<span class="spin">&#9696;</span> Scanning...';
+  btn.disabled = true;
+
+  var log = document.getElementById('finderLog');
+  log.innerHTML = '';
+  document.getElementById('finderResults').innerHTML = '<div class="empty"><div class="ei" style="font-size:28px">&#128270;</div><p>Scanning Google Places...</p></div>';
+
+  finderLog('Starting live Google Places scan...', 'info');
+  finderLog('Suburbs: ' + suburbsToScan.map(function(s){return s.name;}).join(', '), 'info');
+
+  var allResults = [];
+  var seen = new Set();
+  var pending = suburbsToScan.length;
+  var typesToSearch = type === 'all'
+    ? ['shopping_mall','doctor','hospital','local_government_office','real_estate_agency']
+    : [type];
+
+  // Use CORS proxy approach — call Places via fetch with no-cors won't work in browser
+  // Instead use the JS Maps Places Library via a dynamic script tag approach
+  // We use the Places Nearby Search REST endpoint with a JSONP-style callback workaround
+  // Since browser blocks CORS on Places API, we use the Maps JS API instead
+
+  // Check if Maps JS API is loaded, if not load it
+  if(typeof google === 'undefined' || !google.maps || !google.maps.places){
+    finderLog('Loading Google Maps Places library...', 'info');
+    window._finderCallback = function(){
+      finderLog('Maps library ready. Starting scan...', 'ok');
+      runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, apiKey, btn);
+    };
+    var script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_finderCallback';
+    script.onerror = function(){
+      finderLog('ERROR: Could not load Maps API. Check your key is valid and has no HTTP restrictions.', 'warn');
+      btn.innerHTML = '&#128270; Run Live Scan';
+      btn.disabled = false;
+    };
+    document.head.appendChild(script);
+  } else {
+    finderLog('Maps library already loaded. Starting scan...', 'ok');
+    runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, apiKey, btn);
+  }
+}
+
+function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, apiKey, btn){
+  var allResults = [];
+  var seen = new Set();
+  var existingNames = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
+
+  // Create a hidden map div for PlacesService (required by Google)
+  var mapDiv = document.getElementById('_finder_map_hidden');
+  if(!mapDiv){
+    mapDiv = document.createElement('div');
+    mapDiv.id = '_finder_map_hidden';
+    mapDiv.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+    document.body.appendChild(mapDiv);
+  }
+  var map = new google.maps.Map(mapDiv, {center:{lat:-31.9505,lng:115.8605}, zoom:10});
+  var service = new google.maps.places.PlacesService(map);
+
+  var total = suburbsToScan.length * typesToSearch.length;
+  var done = 0;
+
+  finderLog('Scanning ' + suburbsToScan.length + ' suburbs × ' + typesToSearch.length + ' business type(s) = ' + total + ' searches', 'info');
+
+  function onAllDone(){
+    var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
+    var dupes = allResults.filter(function(r){
+      return existingNamesLocal.has(r.name.toLowerCase().trim());
+    }).length;
+    // Apply filters: minScore, maxStars, deduplicate
+    var filtered = allResults.filter(function(r){
+      return r.score >= minScore
+        && r.stars <= maxStars
+        && !existingNamesLocal.has(r.name.toLowerCase().trim());
+    });
+    filtered.sort(function(a,b){return b.score - a.score;});
+    finderPool = filtered;
+
+    finderLog('Scan complete. ' + allResults.length + ' total found. ' + dupes + ' already in database. ' + filtered.length + ' new leads after filters.', 'ok');
+    if(allResults.length > filtered.length - dupes){
+      finderLog('Tip: Change Max Stars to "Any rating" and Min Score to "50+" to see all results.', 'warn');
+    }
+
+    btn.innerHTML = '&#128270; Run Live Scan';
+    btn.disabled = false;
+
+    renderFinderResults(filtered);
+  }
+
+  function searchOne(suburb, type){
+    var loc = new google.maps.LatLng(suburb.lat, suburb.lng);
+    var request = {location: loc, radius: 5000, type: type};
+    service.nearbySearch(request, function(results, status){
+      if(status === google.maps.places.PlacesServiceStatus.OK && results){
+        results.forEach(function(place){
+          if(seen.has(place.place_id)) return;
+          if(!place.rating) return;
+          seen.add(place.place_id);
+          var score = finderScoreLead(place.rating, place.user_ratings_total, place.types);
+          allResults.push({
+            place_id: place.place_id,
+            name: place.name,
+            suburb: suburb.name,
+            type: finderMapType(place.types),
+            address: place.vicinity || '',
+            stars: place.rating,
+            reviews: place.user_ratings_total || 0,
+            score: score,
+            issue: ''
+          });
+        });
+        finderLog(suburb.name + ' / ' + type + ': ' + (results.length) + ' results', 'info');
+      } else if(status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS){
+        finderLog('Error for ' + suburb.name + ': ' + status, 'warn');
+      }
+      done++;
+      if(done >= total) onAllDone();
+    });
+  }
+
+  suburbsToScan.forEach(function(suburb){
+    typesToSearch.forEach(function(type){
+      setTimeout(function(){
+        searchOne(suburb, type);
+      }, 150); // slight stagger to avoid hammering
+    });
+  });
+}
+
+function renderFinderResults(results){
+  var container = document.getElementById('finderResults');
+  if(!results.length){
+    container.innerHTML = '<div class="empty"><div class="ei">&#128269;</div><p>No new leads found. Both filters are now set to show all — try running again.</p></div>';
+    return;
+  }
+
+  var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
+  var notYetImported = results.filter(function(r){ return !finderImported[r.name]; });
+  var urgentCount = results.filter(function(r){return r.score>=80;}).length;
+  var hotCount    = results.filter(function(r){return r.score>=70&&r.score<80;}).length;
+  var warmCount   = results.filter(function(r){return r.score>=60&&r.score<70;}).length;
+  var coldCount   = results.filter(function(r){return r.score<60;}).length;
+
+  var header = '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 14px;flex-wrap:wrap;gap:8px">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+results.length+' new leads found</div>'
+    + '<div style="font-size:11px;margin-top:3px">'
+    + (urgentCount?'<span style="color:var(--lost);font-weight:800">● '+urgentCount+' Urgent&nbsp;&nbsp;</span>':'')
+    + (hotCount?'<span style="color:var(--warn);font-weight:800">● '+hotCount+' Hot&nbsp;&nbsp;</span>':'')
+    + (warmCount?'<span style="color:var(--cyd);font-weight:800">● '+warmCount+' Warm&nbsp;&nbsp;</span>':'')
+    + (coldCount?'<span style="color:var(--t3)">● '+coldCount+' Cold</span>':'')
+    + '</div></div>'
+    + (notYetImported.length>0
+      ? '<button class="btn btn-cy btn-sm" id="importAllBtn" onclick="importAllFinder()">&#11015; Import All '+notYetImported.length+'</button>'
+      : '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>')
+    + '</div>';
+
+  var cards = results.map(function(r, idx){
+    var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
+    var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#333';
+    var starCls = r.stars<=2.5 ? 'stars-hot' : r.stars<=3.5 ? 'stars-warm' : 'stars-ok';
+    var scoreLabel = r.score>=80?'URGENT':r.score>=70?'HOT':r.score>=60?'WARM':'COLD';
+    var imported = finderImported[r.name] || existingNamesLocal.has(r.name.toLowerCase().trim());
+
+    return '<div class="fr-card" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:10px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+
+      // Always-visible header — click to expand/collapse
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="finderToggle('+idx+')">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
+      + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.suburb)+' · '+e(r.type)+'</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+      + '<div style="text-align:right">'
+      + '<div style="font-size:22px;font-weight:900;line-height:1;color:'+scoreColor+'">'+r.score+'</div>'
+      + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:'+scoreColor+'">'+scoreLabel+'</div>'
+      + '</div>'
+      + '<div id="frc-arr-'+idx+'" style="font-size:14px;color:var(--t3);transition:transform .2s">▶</div>'
+      + '</div>'
+      + '</div>'
+
+      // Quick tag row — always visible
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+      + '<span class="fr-tag '+starCls+'">★ '+r.stars+' ('+( r.reviews||0).toLocaleString()+' reviews)</span>'
+      + '<span class="fr-tag">'+e(r.address)+'</span>'
+      + '</div>'
+
+      // Expandable detail panel — open by default
+      + '<div id="frc-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+      + mkDetailBox('Address', e(r.address||'—'))
+      + mkDetailBox('BBM Score', '<span style="color:'+scoreColor+';font-weight:800">'+r.score+' / 100 — '+scoreLabel+'</span>')
+      + mkDetailBox('Google Rating', '★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews')
+      + mkDetailBox('Next Action', 'Source contact details then send Email 1')
+      + '</div>'
+      + (imported
+        ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
+        : '<button class="btn btn-cy btn-sm" id="frbtn-'+idx+'" onclick="importFinder('+idx+')" style="width:100%;justify-content:center">+ Import to Leads</button>'
+      )
+      + '</div>'
+
+      + '</div>';
+  }).join('');
+
+  container.innerHTML = header + cards;
+}
+
+function mkDetailBox(label, val){
+  return '<div style="background:var(--s2);border-radius:8px;padding:10px">'
+    + '<div style="font-size:9px;color:var(--t3);font-family:var(--m);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">'+label+'</div>'
+    + '<div style="font-size:12px;color:var(--t2);line-height:1.4">'+val+'</div>'
+    + '</div>';
+}
+
+function finderToggle(idx){
+  var body = document.getElementById('frc-body-'+idx);
+  var arr  = document.getElementById('frc-arr-'+idx);
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arr) arr.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function mkLeadFromPool(r){
+  return {
+    id: nid++, name: r.name, suburb: r.suburb, type: r.type,
+    score: r.score, zone: r.suburb + ' Area', address: r.address||'',
+    stars: r.stars, reviews: r.reviews, keyIssue: r.issue||'',
+    contact:'', phone: r.phone||'', email:'', stage:'To Contact', quote:null, e1:'',
+    nextDate:'', nextAction:'Source contact details and send email 1',
+    notes:'Imported via Lead Finder on ' + new Date().toISOString().slice(0,10)
+      + (r.website ? '\nWebsite: '+r.website : '')
+      + (r.stars ? '\nGoogle: '+r.stars+' stars ('+r.reviews+' reviews)' : ''),
+    activity:[], priority: r.score>=80?'URGENT':r.score>=70?'HIGH':'-',
+    createdAt: new Date().toISOString().slice(0,10)
+  };
+}
+
+function importFinder(idx){
+  var r = finderPool[idx];
+  if(!r) return;
+  if(finderImported[r.name]){toast('Already imported','w'); return;}
+  var newLead = mkLeadFromPool(r);
+  leads.push(newLead);
+  persist();
+  finderImported[r.name] = true;
+  var card = document.getElementById('frc-' + idx);
+  if(card){ card.classList.add('imported'); }
+  var btn2 = document.getElementById('frbtn-' + idx);
+  if(btn2) btn2.outerHTML = '<div style="color:var(--won);font-size:12px;font-weight:800;padding:6px 0">&#10003; Added to leads</div>';
+  usb();
+  toast(r.name + ' added to leads', 's');
+}
+
+function importAllFinder(){
+  var imported = 0;
+  finderPool.forEach(function(r, idx){
+    if(finderImported[r.name]) return;
+    var newLead = mkLeadFromPool(r);
+    leads.push(newLead);
+    finderImported[r.name] = true;
+    imported++;
+    var card = document.getElementById('frc-' + idx);
+    if(card) card.classList.add('imported');
+    var btn2 = document.getElementById('frbtn-' + idx);
+    if(btn2) btn2.outerHTML = '<div style="color:var(--won);font-size:12px;font-weight:800;padding:6px 0">&#10003; Added to leads</div>';
+  });
+  persist();
+  usb();
+  var importAllBtn = document.getElementById('importAllBtn');
+  if(importAllBtn) importAllBtn.outerHTML = '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>';
+  toast(imported + ' leads imported', 's');
+}
+
+/* ===== CALENDAR ===== */
+var EV_COLORS={lead:"#3EC6F0",alert:"#E84040",note:"#22B573",suggest:"#F5A623",contract:"#0E7FAB"};
+function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMonth();rCal();}
+function calMove(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}rCal();}
+function switchCalTab(t){
+  document.querySelectorAll(".cal-tab").forEach(function(el){el.classList.remove("on");});
+  document.getElementById("caltab-"+t).classList.add("on");
+  document.getElementById("calPane-add").style.display=t==="add"?"block":"none";
+  document.getElementById("calPane-contract").style.display=t==="contract"?"block":"none";
+  document.getElementById("contractList").style.display=t==="contract"?"block":"none";
+  document.getElementById("calAlerts").style.display=t==="add"?"block":"none";
+  if(t==="contract")rContractList();
+}
+function addContract(){
+  var nm=document.getElementById("ct-name").value.trim();
+  var start=document.getElementById("ct-start").value;
+  var freq=document.getElementById("ct-freq").value;
+  var note=document.getElementById("ct-note").value.trim();
+  if(!nm){toast("Enter a client or job name","w");return;}
+  if(!start){toast("Pick a start date","w");return;}
+  var ct={id:"ct"+Date.now(),name:nm,start:start,freq:freq,note:note};
+  contracts.push(ct);
+  persistContracts();
+  document.getElementById("ct-name").value="";
+  document.getElementById("ct-note").value="";
+  rContractList();
+  rCal();
+  toast("Recurring clean added","s");
+}
+function delContract(id){
+  contracts=contracts.filter(function(c){return c.id!==id;});
+  persistContracts();
+  rContractList();
+  rCal();
+  toast("Removed","w");
+}
+function rContractList(){
+  var list=document.getElementById("contractList");
+  if(!contracts.length){list.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px">No recurring cleans yet. Add your first contract above.</div>';return;}
+  var freqLabel={weekly:"Weekly",fortnightly:"Fortnightly",monthly:"Monthly",quarterly:"Quarterly"};
+  list.innerHTML=contracts.map(function(c){
+    return'<div class="contract-item"><div class="contract-dot"></div><div style="flex:1"><div class="contract-nm">'+e(c.name)+'</div><div class="contract-freq">'+freqLabel[c.freq]+(c.note?" &middot; "+e(c.note):"")+'</div></div><button class="contract-del" onclick="delContract(\''+c.id+'\')">&#10005;</button></div>';
+  }).join("");
+}
+function getContractEvents(yr,mo){
+  var evs=[];
+  var freqDays={weekly:7,fortnightly:14,monthly:0,quarterly:0};
+  contracts.forEach(function(c){
+    var start=new Date(c.start+"T00:00:00");
+    var monthStart=new Date(yr,mo,1);
+    var monthEnd=new Date(yr,mo+1,0);
+    var d=new Date(start);
+    for(var safety=0;safety<500;safety++){
+      if(d>monthEnd)break;
+      if(d>=monthStart&&d<=monthEnd){
+        evs.push({date:toISO(d),title:c.name,sub:c.freq+" clean"+(c.note?" - "+c.note:""),type:"contract",auto:true,contractId:c.id});
+      }
+      if(c.freq==="weekly")d.setDate(d.getDate()+7);
+      else if(c.freq==="fortnightly")d.setDate(d.getDate()+14);
+      else if(c.freq==="monthly"){d.setMonth(d.getMonth()+1);}
+      else if(c.freq==="quarterly"){d.setMonth(d.getMonth()+3);}
+      else break;
+    }
+  });
+  return evs;
+}
+function getLeadEvents(){
+  var evs=[];
+  var today=new Date();today.setHours(0,0,0,0);
+  leads.forEach(function(l){
+    if(l.nextDate){
+      var d=new Date(l.nextDate+"T00:00:00");
+      var diff=Math.round((d-today)/864e5);
+      var type=diff<0?"alert":diff<=2?"alert":"lead";
+      evs.push({date:l.nextDate,title:l.name,sub:l.nextAction||"Action due",type:type,leadId:l.id,auto:true});
+    }
+    if(l.e1){
+      [4,8,12].forEach(function(n){
+        var due=addDays(l.e1,n);
+        var iso=toISO(due);
+        if(due>=today){
+          evs.push({date:iso,title:l.name,sub:"Email "+(n/4+1)+" due",type:"lead",leadId:l.id,auto:true});
+        }
+      });
+    }
+  });
+  return evs;
+}
+function buildSuggestions(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var sug=[];
+  var uncontacted=leads.filter(function(l){return l.stage==="To Contact"&&(l.score||0)>=75;});
+  if(uncontacted.length>0){
+    var d=new Date(today);d.setDate(d.getDate()+1);
+    sug.push({date:toISO(d),title:"Call "+uncontacted[0].name,sub:"Score "+uncontacted[0].score+" and still uncontacted",type:"suggest",auto:true});
+  }
+  var replied=leads.filter(function(l){return l.stage==="Replied";});
+  if(replied.length>0){
+    sug.push({date:toISO(today),title:"Reply to "+replied[0].name,sub:"They replied. Do not leave them waiting.",type:"alert",auto:true});
+  }
+  return sug;
+}
+function allCalEvs(){
+  return getLeadEvents().concat(buildSuggestions()).concat(calEvents).concat(getContractEvents(calYear,calMonth));
+}
+function rCal(){
+  var months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  document.getElementById("calMonthLabel").textContent=months[calMonth]+" "+calYear;
+  var firstDay=new Date(calYear,calMonth,1).getDay();
+  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  var today=new Date();today.setHours(0,0,0,0);
+  var allEvs=allCalEvs();
+  var grid=document.getElementById("calDays");
+  grid.innerHTML="";
+  var totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
+  for(var i=0;i<totalCells;i++){
+    var dayNum=i-firstDay+1;
+    var isThisMonth=dayNum>=1&&dayNum<=daysInMonth;
+    var d=isThisMonth?new Date(calYear,calMonth,dayNum):null;
+    var iso=d?toISO(d):null;
+    var dayEvs=iso?allEvs.filter(function(ev){return ev.date===iso;}):[];
+    var isToday=d&&d.getTime()===today.getTime();
+    var cls="cal-day"+(isToday?" today":"")+(isThisMonth?"":" other-mo")+(dayEvs.length?" has-ev":"");
+    var html='<div class="'+cls+'" onclick="openDay(\''+iso+'\','+dayNum+')"><div class="cal-dnum">'+(isThisMonth?dayNum:"")+'</div>';
+    dayEvs.slice(0,3).forEach(function(ev){html+='<div class="cal-ev '+ev.type+'">'+e(ev.title)+"</div>";});
+    if(dayEvs.length>3)html+='<div class="cal-ev more">+'+(dayEvs.length-3)+" more</div>";
+    html+="</div>";
+    grid.innerHTML+=html;
+  }
+  rCalAlerts();
+}
+function rCalAlerts(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var allEvs=getLeadEvents().concat(buildSuggestions()).concat(calEvents).concat(getContractEvents(calYear,calMonth));
+  var evs=allEvs.filter(function(ev){
+    var d=new Date(ev.date+"T00:00:00");
+    return d>=today&&(d-today)/864e5<=14;
+  }).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(0,14);
+  var html='<div class="cal-al-t">Upcoming 14 Days</div>';
+  if(!evs.length)html+='<div style="color:var(--t3);font-size:12px;padding:4px">Nothing scheduled.</div>';
+  evs.forEach(function(ev){
+    var d=new Date(ev.date+"T00:00:00");
+    var diff=Math.round((d-today)/864e5);
+    var when=diff===0?"Today":diff===1?"Tomorrow":"In "+diff+" days";
+    var urgCls=ev.type==="alert"?"urgent":ev.type==="suggest"?"warn":"info";
+    html+='<div class="cal-alert-item '+urgCls+'" onclick="'+(ev.leadId?"od2("+ev.leadId+")":"openDay('"+ev.date+"','')")+'">'
+      +'<div class="cal-ai-dot" style="background:'+EV_COLORS[ev.type]+'"></div>'
+      +'<div><div class="cal-ai-b">'+e(ev.title)+'</div><div class="cal-ai-s">'+when+' &middot; '+e(ev.sub||ev.type)+"</div></div></div>";
+  });
+  document.getElementById("calAlerts").innerHTML=html;
+}
+function openDay(iso,dayNum){
+  if(!iso)return;
+  var allEvs=getLeadEvents().concat(buildSuggestions()).concat(calEvents).concat(getContractEvents(calYear,calMonth));
+  var evs=allEvs.filter(function(ev){return ev.date===iso;});
+  var d=new Date(iso+"T00:00:00");
+  document.getElementById("dayModalTitle").textContent=d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"});
+  var html="";
+  if(!evs.length)html='<div style="color:var(--t3);font-size:13px;padding:8px 0">Nothing on this day.</div>';
+  evs.forEach(function(ev){
+    html+='<div class="day-ev-item" onclick="'+(ev.leadId?"cdayM();od2("+ev.leadId+")":"")+'">'
+      +'<div class="day-ev-dot" style="background:'+EV_COLORS[ev.type]+'"></div>'
+      +'<div style="flex:1"><div class="day-ev-b">'+e(ev.title)+'</div><div class="day-ev-s">'+e(ev.sub||ev.type)+"</div></div>"
+      +(!ev.auto?'<button class="day-ev-del" onclick="event.stopPropagation();delCalEv(\''+ev.id+'\')">&#10005;</button>':"")
+      +"</div>";
+  });
+  html+='<div style="margin-top:12px"><button class="btn btn-gh btn-sm" onclick="document.getElementById(\'ev-date\').value=\''+iso+'\';cdayM();">Add event this day</button></div>';
+  document.getElementById("dayEvList").innerHTML=html;
+  document.getElementById("dayModal").classList.add("on");
+}
+function cdayM(){document.getElementById("dayModal").classList.remove("on");}
+function addCalEv(){
+  var title=document.getElementById("ev-title").value.trim();
+  var date=document.getElementById("ev-date").value;
+  var type=document.getElementById("ev-type").value;
+  if(!title){toast("Add a title first","w");return;}
+  if(!date){toast("Pick a date","w");return;}
+  calEvents.push({id:"ev"+Date.now(),date:date,title:title,type:type,sub:"",auto:false});
+  persistCal();
+  document.getElementById("ev-title").value="";
+  rCal();
+  toast("Added to calendar","s");
+}
+function delCalEv(id){
+  calEvents=calEvents.filter(function(ev){return ev.id!==id;});
+  persistCal();
+  document.getElementById("dayModal").classList.remove("on");
+  rCal();
+  toast("Removed","w");
+}
+
+/* ===== KANBAN ===== */
+function rKanban(){
+  document.getElementById("kanban").innerHTML=STAGES.filter(function(s){return s!=="On Hold";}).map(function(s){
+    var cards=leads.filter(function(l){return l.stage===s;}).sort(function(a,b){return(b.score||0)-(a.score||0);});
+    return'<div class="kcol"><div class="kch"><div class="kct"><span style="width:8px;height:8px;border-radius:50%;background:'+SC[s]+';display:inline-block;flex-shrink:0"></span>'+s+'</div><span class="kcc">'+cards.length+"</span></div>"+'<div class="kcards">'+cards.map(function(l){
+      return'<div class="kcard" onclick="od2('+l.id+')"><div class="kn">'+e(l.name)+'</div><div class="ksb">'+e(l.suburb||"")+(l.type?" &middot; "+e(l.type):"")+'</div><div class="kf">'+chip(l.score)+"<div>"+(over(l.nextDate)?'<div style="font-size:10px;color:var(--warn);font-family:var(--m)">'+fd(l.nextDate)+"</div>":"")+(l.stars!=null?'<div style="font-size:10px;color:var(--t3)">&starf; '+l.stars+"</div>":"")+"</div></div>"+(l.e1?"<div style='margin-top:8px'>"+edots(l)+"</div>":"")+"</div>";
+    }).join("")+(cards.length?"":'<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">Empty</div>')+"</div></div>";
+  }).join("");
+}
+
+/* ===== ALL LEADS TABLE ===== */
+function setF(f){aF=f;rl();}
+function rl(){
+  var counts={All:leads.length};STAGES.forEach(function(s){counts[s]=leads.filter(function(l){return l.stage===s;}).length;});
+  document.getElementById("fstrip").innerHTML=["All"].concat(STAGES).map(function(f){
+    return'<button class="fc '+(aF===f?"on":"")+'" onclick="setF(\''+f+'\')">'+f+' <span style="opacity:.6">'+(counts[f]||0)+"</span></button>";
+  }).join("");
+  var q=(document.getElementById("sq")?document.getElementById("sq").value:"").toLowerCase();
+  var fil=leads.filter(function(l){
+    var mf=aF==="All"||l.stage===aF;
+    var ms=!q||(l.name||"").toLowerCase().includes(q)||(l.suburb||"").toLowerCase().includes(q)||(l.type||"").toLowerCase().includes(q)||(l.zone||"").toLowerCase().includes(q);
+    return mf&&ms;
+  }).sort(function(a,b){return(b.score||0)-(a.score||0);});
+  document.getElementById("ltb").innerHTML=fil.length?fil.map(function(l){
+    var sc=l.stars!=null?(l.stars<=2.5?"var(--lost)":l.stars<=3.5?"var(--warn)":"var(--won)"):"var(--t3)";
+    var noC=!l.phone&&!l.email?"&#9888; ":"";
+    return"<tr onclick='od2("+l.id+")'><td><div class='ln'>"+noC+e(l.name)+"</div><div class='lsb'>"+e(l.suburb||"")+(l.type?" &middot; "+e(l.type):"")+"</div></td><td>"+chip(l.score)+"</td><td style='font-family:var(--m);font-size:12px;color:"+sc+"'>"+(l.stars!=null?"&starf; "+l.stars:"-")+"</td><td style='font-family:var(--m);font-size:12px;color:var(--t2)'>"+(l.reviews!=null?l.reviews.toLocaleString():"-")+"</td><td>"+pill(l.stage,true)+"</td><td>"+edots(l)+"</td><td style='font-size:12px;color:var(--t2)'>"+(l.contact||"<span style='color:var(--t3)'>-</span>")+"</td><td style='font-size:12px;color:"+(over(l.nextDate)?"var(--warn)":"var(--t2)")+"'><div>"+e(l.nextAction||"-")+"</div>"+(l.nextDate?"<div style='font-size:10px;color:var(--t3)'>"+fd(l.nextDate)+"</div>":"")+"</td><td style='font-family:var(--m);font-size:12px;color:var(--cyd);font-weight:600'>"+(l.quote?"$"+Number(l.quote).toLocaleString()+"/mo":"-")+"</td><td onclick='event.stopPropagation()'><button class='btn btn-gh btn-xs' onclick='oEdit("+l.id+")'>Edit</button></td></tr>";
+  }).join(""):"<tr><td colspan='10'><div class='empty'><div class='ei'>&#128269;</div><p>No leads found</p></div></td></tr>";
+}
+
+/* ===== LEAD DETAIL DRAWER with inline editing ===== */
+function od2(id){
+  var l=leads.find(function(x){return x.id===id;});if(!l)return;openId=id;
+  document.getElementById("dpn").textContent=l.name;
+  document.getElementById("dpm").innerHTML=pill(l.stage)+
+    (l.score!=null?'<span style="font-family:var(--m);font-size:12px;color:'+sco(l.score)+';font-weight:700">Score '+l.score+"</span>":"")+
+    (l.quote?'<span style="font-size:12px;color:var(--won);font-weight:800">$'+Number(l.quote).toLocaleString()+"/mo</span>":"")+
+    (l.priority==="URGENT"?'<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(232,64,64,.12);color:var(--lost)">URGENT</span>':"");
+  var seq="";
+  if(l.e1){seq='<div class="ds"><div class="dst">Email Sequence</div><div class="sqr">';[{n:"EMAIL 1",d:0},{n:"EMAIL 2",d:4},{n:"EMAIL 3",d:8},{n:"EMAIL 4",d:12}].forEach(function(s){var due=addDays(l.e1,s.d),dn=due<=new Date();seq+='<div class="sqst '+(dn?"dn":"up")+'"><div class="sqn">'+s.n+'</div><div class="sqd">'+fmtD(due)+'</div><div class="sqs" style="color:'+(dn?"var(--won)":"var(--t3)")+'">'+(dn?"&#10003; Sent":"Upcoming")+"</div></div>";});seq+="</div></div>";}
+  var acts=(l.activity||[]).slice().reverse();
+  var noContact=!l.phone&&!l.email&&!l.contact;
+  var noContactBanner=noContact?'<div style="margin-bottom:10px;padding:10px 12px;background:rgba(245,166,35,.08);border:1.5px solid rgba(245,166,35,.3);border-radius:8px;font-size:12px;color:#b47c00;font-weight:700">&#9888; No contact info on file. Click any field to edit inline.</div>':"";
+  document.getElementById("dpb").innerHTML=
+    noContactBanner+
+    '<div class="ds"><div class="dst">Contact Details <span style="font-size:9px;color:var(--cyd);margin-left:6px">Click any value to edit</span></div>'+
+    '<div class="dg">'+
+    mkDFE(id,"contact",l.contact,"Contact Name")+
+    mkDFE(id,"phone",l.phone,"Phone","tel")+
+    mkDFE(id,"email",l.email,"Email","email")+
+    mkDFE(id,"address",l.address,"Address")+
+    "</div></div>"+
+    '<div class="ds"><div class="dst">Lead Details</div><div class="dg">'+
+    "<div><div class='dfl'>Suburb</div><div class='dfv'>"+e(l.suburb||"-")+"</div></div>"+
+    "<div><div class='dfl'>Type</div><div class='dfv'>"+e(l.type||"-")+"</div></div>"+
+    "<div><div class='dfl'>Zone</div><div class='dfv' style='font-size:12px'>"+e(l.zone||"-")+"</div></div>"+
+    "<div><div class='dfl'>Quote</div><div class='dfv "+(l.quote?"wn":"")+"'>"+(l.quote?"$"+Number(l.quote).toLocaleString()+"/month":"Not quoted")+"</div></div>"+
+    "</div>"+
+    '<div class="dg" style="margin-top:9px">'+
+    "<div><div class='dfl'>Next Action</div><div class='dfv "+(over(l.nextDate)?"ov":"")+"'>"+e(l.nextAction||"-")+"</div></div>"+
+    "<div><div class='dfl'>Due Date</div><div class='dfv "+(over(l.nextDate)?"ov":"")+"'>"+fd(l.nextDate)+"</div></div>"+
+    "</div>"+
+    (l.stars!=null?'<div style="display:flex;gap:16px;margin-top:11px;padding:10px;background:var(--s2);border-radius:8px;border:1.5px solid var(--bd)"><div><div class="dfl">Google Rating</div><div style="font-size:20px;font-weight:900;color:'+(l.stars<=2.5?"var(--lost)":l.stars<=3.5?"var(--warn)":"var(--won)")+'">&#9733; '+l.stars+'</div></div><div><div class="dfl">Reviews</div><div style="font-size:18px;font-weight:900;color:var(--cyd)">'+l.reviews.toLocaleString()+"</div></div></div>":"")+
+    (l.keyIssue?'<div class="ki"><div class="kil">Key Issue from Reviews</div><div class="kip">'+e(l.keyIssue)+"</div></div>":"")+
+    (l.notes?'<div style="margin-top:10px;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:11px;font-size:13px;color:var(--t2);line-height:1.7">'+e(l.notes)+"</div>":"")+
+    "</div>"+seq+
+    '<div class="ds"><div class="dst">Update Stage</div><div class="schips">'+
+    STAGES.map(function(s){return'<button class="sch '+(l.stage===s?"cur":"")+'" style="background:'+SB[s]+';color:'+SC[s]+';border-color:'+(l.stage===s?SC[s]:"transparent")+'" onclick="qStg('+id+',\''+s+'\')">'+s+"</button>";}).join("")+
+    "</div></div>"+
+    '<div class="ds"><div class="dst">Activity Log</div>'+
+    (acts.length?acts.map(function(a){return'<div class="ai"><div class="aib"></div><div><div class="ait">'+e(a.t)+'</div><div class="aid">'+e(a.d)+"</div></div></div>";}).join(""):'<div style="color:var(--t3);font-size:12px;padding:4px 0">No activity yet</div>')+
+    "</div>";
+  document.getElementById("da").innerHTML=
+    '<button class="btn btn-cy btn-sm" onclick="oEdit('+id+')">Edit All</button>'+
+    '<button class="btn btn-gh btn-sm" onclick="cdp();go(\'templates\')">Templates</button>'+
+    (l.phone?'<a class="btn btn-gh btn-sm" href="tel:'+l.phone+'">Call</a>':"")+
+    (l.email?'<a class="btn btn-gh btn-sm" href="mailto:'+l.email+'">Email</a>':"")+
+    (l.address?'<a class="btn btn-gh btn-sm" href="https://maps.google.com/?q='+encodeURIComponent(l.address+" WA")+'" target="_blank">Maps</a>':"")+
+    '<button class="btn btn-rd btn-sm" onclick="if(confirm(\'Delete this lead?\'))dLead('+id+')">Delete</button>';
+  document.getElementById("li").value="";
+  document.getElementById("dpo").classList.add("on");
+  document.getElementById("dpp").classList.add("on");
+}
+
+/* Inline editable field builder */
+function mkDFE(id,field,val,label,inputType){
+  var t=inputType||"text";
+  var display=val?('<a href="'+(t==="tel"?"tel:"+val:t==="email"?"mailto:"+val:"#")+'" style="color:var(--cy);text-decoration:none">'+e(val)+"</a>"):'<span style="color:var(--warn);font-style:italic">Not set</span>';
+  return'<div><div class="dfl">'+label+'</div>'
+    +'<div id="dfe-view-'+id+'-'+field+'" class="df-edit-row"><div class="dfv">'+display+'</div>'
+    +'<button class="df-pencil" onclick="startInlineEdit('+id+',\''+field+'\',\''+e(val||'')+'\',\''+label+'\',\''+t+'\')">&#9998;</button></div>'
+    +'<div id="dfe-edit-'+id+'-'+field+'" style="display:none">'
+    +'<input class="dfe" id="dfe-inp-'+id+'-'+field+'" type="'+t+'" value="'+e(val||'')+'" placeholder="'+label+'" onkeydown="if(event.key===\'Enter\')saveInlineEdit('+id+',\''+field+'\');if(event.key===\'Escape\')cancelInlineEdit('+id+',\''+field+'\')">'
+    +'<div style="display:flex;gap:6px;margin-top:5px">'
+    +'<button class="btn btn-cy btn-xs" onclick="saveInlineEdit('+id+',\''+field+'\')">Save</button>'
+    +'<button class="btn btn-gh btn-xs" onclick="cancelInlineEdit('+id+',\''+field+'\')">Cancel</button>'
+    +'</div></div></div>';
+}
+function startInlineEdit(id,field,val,label,t){
+  document.getElementById("dfe-view-"+id+"-"+field).style.display="none";
+  document.getElementById("dfe-edit-"+id+"-"+field).style.display="block";
+  var inp=document.getElementById("dfe-inp-"+id+"-"+field);
+  inp.value=val;
+  inp.focus();
+}
+function cancelInlineEdit(id,field){
+  document.getElementById("dfe-view-"+id+"-"+field).style.display="flex";
+  document.getElementById("dfe-edit-"+id+"-"+field).style.display="none";
+}
+function saveInlineEdit(id,field){
+  var inp=document.getElementById("dfe-inp-"+id+"-"+field);
+  var val=inp.value.trim();
+  var l=leads.find(function(x){return x.id===id;});
+  if(!l)return;
+  l[field]=val;
+  l.activity=l.activity||[];
+  l.activity.push({t:"Updated "+field+": "+val,d:new Date().toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})});
+  persist();
+  toast(field+" saved","s");
+  od2(id);
+}
+function cdp(){document.getElementById("dpo").classList.remove("on");document.getElementById("dpp").classList.remove("on");openId=null;}
+function dolog(){if(!openId)return;var inp=document.getElementById("li"),txt=inp.value.trim();if(!txt)return;var l=leads.find(function(x){return x.id===openId;});if(!l)return;l.activity=l.activity||[];var now=new Date();l.activity.push({t:txt,d:now.toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})});persist();inp.value="";od2(openId);toast("Logged","s");}
+function clrF(){["name","suburb","type","score","zone","address","stars","reviews","keyissue","contact","phone","email","stage","quote","e1","nextdate","nextaction","notes"].forEach(function(id){var el=document.getElementById("f-"+id);if(!el)return;if(el.tagName==="SELECT")el.selectedIndex=0;else el.value="";});document.getElementById("f-stage").value="To Contact";}
+function oAdd(){eid=null;clrF();document.getElementById("mttl").textContent="Add Lead";document.getElementById("modalBg").classList.add("on");}
+function oEdit(id){var l=leads.find(function(x){return x.id===id;});if(!l)return;eid=id;document.getElementById("mttl").textContent="Edit Lead";document.getElementById("f-name").value=l.name||"";document.getElementById("f-suburb").value=l.suburb||"";document.getElementById("f-type").value=l.type||"";document.getElementById("f-score").value=l.score!=null?l.score:"";document.getElementById("f-zone").value=l.zone||"";document.getElementById("f-address").value=l.address||"";document.getElementById("f-stars").value=l.stars!=null?l.stars:"";document.getElementById("f-reviews").value=l.reviews!=null?l.reviews:"";document.getElementById("f-keyissue").value=l.keyIssue||"";document.getElementById("f-contact").value=l.contact||"";document.getElementById("f-phone").value=l.phone||"";document.getElementById("f-email").value=l.email||"";document.getElementById("f-stage").value=l.stage||"To Contact";document.getElementById("f-quote").value=l.quote!=null?l.quote:"";document.getElementById("f-e1").value=l.e1||"";document.getElementById("f-nextdate").value=l.nextDate||"";document.getElementById("f-nextaction").value=l.nextAction||"";document.getElementById("f-notes").value=l.notes||"";document.getElementById("modalBg").classList.add("on");}
+function cModal(){document.getElementById("modalBg").classList.remove("on");}
+function sLead(){
+  var name=document.getElementById("f-name").value.trim();if(!name){toast("Business name required","w");return;}
+  var ex=eid?leads.find(function(x){return x.id===eid;}):null;
+  var data={id:eid||nid++,name:name,suburb:document.getElementById("f-suburb").value.trim(),type:document.getElementById("f-type").value||"",score:document.getElementById("f-score").value!==""?Number(document.getElementById("f-score").value):null,zone:document.getElementById("f-zone").value.trim(),address:document.getElementById("f-address").value.trim(),stars:document.getElementById("f-stars").value!==""?Number(document.getElementById("f-stars").value):null,reviews:document.getElementById("f-reviews").value!==""?Number(document.getElementById("f-reviews").value):null,keyIssue:document.getElementById("f-keyissue").value.trim(),contact:document.getElementById("f-contact").value.trim(),phone:document.getElementById("f-phone").value.trim(),email:document.getElementById("f-email").value.trim(),stage:document.getElementById("f-stage").value,quote:document.getElementById("f-quote").value!==""?Number(document.getElementById("f-quote").value):null,e1:document.getElementById("f-e1").value||"",nextDate:document.getElementById("f-nextdate").value||"",nextAction:document.getElementById("f-nextaction").value.trim(),notes:document.getElementById("f-notes").value.trim(),activity:ex?(ex.activity||[]):[],priority:ex?ex.priority:"-",createdAt:ex?ex.createdAt:new Date().toISOString().slice(0,10)};
+  if(eid){leads=leads.map(function(l){return l.id===eid?data:l;});toast("Updated","s");}else{leads.push(data);toast("Lead added","s");}
+  persist();cModal();rHome();rl();rKanban();if(openId===eid)od2(eid);
+}
+function dLead(id){leads=leads.filter(function(l){return l.id!==id;});persist();cdp();rHome();rl();rKanban();toast("Deleted","w");}
+function qStg(id,s){var l=leads.find(function(x){return x.id===id;});if(!l)return;l.stage=s;persist();od2(id);rHome();rl();rKanban();toast("Stage: "+s,"s");}
+
+/* ===== INTEL ===== */
+var PZONES=[{nm:"Zone 1 Inner North",desc:"Osborne Park, Stirling, Balcatta",biz:10,avg:3.9,hi:3,top:85,fill:80,act:"Home base. Regus and Chambers Franklyn are immediate targets. Walk-in pitch is very doable."},{nm:"Zone 2 North",desc:"Joondalup, Wanneroo",biz:6,avg:3.9,hi:1,top:90,fill:90,act:"Officeworks Joondalup is the top single target in the entire dataset. 743 reviews at 2.4 stars."},{nm:"Zone 3 CBD/West",desc:"Perth CBD, West Perth, Wembley",biz:5,avg:4.3,hi:1,top:65,fill:45,act:"Lower direct opportunity in this zone. Focus on property agents as referral sources instead."},{nm:"Zone 4 South",desc:"Fremantle, East Fremantle",biz:5,avg:3.5,hi:2,top:95,fill:95,act:"URGENT. Dept of Communities at 1.5 stars is the number one target in the full dataset. Call the facilities manager this week."},{nm:"Zone 5 East",desc:"Midland, Midvale",biz:6,avg:3.6,hi:4,top:88,fill:88,act:"Highest density of failing facilities anywhere in the sweep. Three of the top eight targets are in Midland. Worth a dedicated batch visit."},{nm:"Zone 6 SE",desc:"Canning Vale, Cannington",biz:2,avg:4.3,hi:0,top:35,fill:35,act:"Under-searched in this sweep. Expand to Bentley, Cannington and Welshpool in the next round."}];
+function rIntel(){
+  var ml=leads.filter(function(l){return l.id>=100&&l.id<200;});
+  document.getElementById("intelKPIs").innerHTML=ikpi(ml.length,"var(--cyd)","Businesses")+ikpi(6,"var(--cyd)","Zones")+ikpi(ml.filter(function(l){return l.score>=75;}).length,"var(--lost)","HIGH Priority")+ikpi("3.7","var(--cyd)","Avg Rating")+ikpi("2,700+","var(--cyd)","Reviews");
+  var sorted=ml.slice().sort(function(a,b){return(b.score||0)-(a.score||0);});
+  document.getElementById("intelPri").innerHTML=sorted.map(function(l,i){return mkICard(l,i+1);}).join("");
+  document.getElementById("intel-timeline").innerHTML=mkTimeline(ml,"zone");
+  document.getElementById("intelZones").innerHTML=PZONES.map(function(z){return'<div class="zcard"><h3>'+z.nm+'</h3><div class="zcd">'+z.desc+'</div><div class="zbar"><div class="zfill" style="width:'+z.fill+'%"></div></div><div class="zst"><span class="l">Businesses</span><span class="v">'+z.biz+'</span></div><div class="zst"><span class="l">Avg Rating</span><span class="v" style="color:'+(z.avg<=3?"var(--lost)":z.avg<=3.8?"var(--warn)":"var(--won)")+'">'+z.avg+' &starf;</span></div><div class="zst"><span class="l">HIGH Priority</span><span class="v" style="color:var(--lost)">'+z.hi+'</span></div><div class="zst"><span class="l">Top Score</span><span class="v" style="color:'+(z.top>=80?"var(--lost)":"var(--warn)")+'">'+z.top+'</span></div><div class="zact">'+z.act+'</div></div>';}).join("");
+}
+var LRINGS=[{nm:"Ring 1 Under 5 Min",badge:"Walk if you have to",desc:"Nollamara and Yokine. Right on your doorstep.",ids:[204,201,202,203]},{nm:"Ring 2 Mirrabooka Cluster",badge:"Highest density of failing facilities",desc:"Mirrabooka. 7 minutes from home.",ids:[207,205,206,208]},{nm:"Ring 3 Afternoon Sweep",badge:"Batch into one run",desc:"Dianella, Morley, Maylands, Inglewood. 10 to 12 minutes.",ids:[209,210,212,211,213]}];
+function rLocal(){
+  var ll=leads.filter(function(l){return l.id>=200&&l.id<300;});
+  document.getElementById("localKPIs").innerHTML=ikpi(ll.length,"var(--cyd)","Local Targets")+ikpi(3,"var(--cyd)","Drive Rings")+ikpi(ll.filter(function(l){return l.score>=70;}).length,"var(--lost)","HIGH Priority")+ikpi("2 min","var(--lost)","Closest")+ikpi(88,"var(--lost)","Top Score");
+  var sorted=ll.slice().sort(function(a,b){return(b.score||0)-(a.score||0);});
+  document.getElementById("localPri").innerHTML=sorted.map(function(l,i){return mkICard(l,i+1);}).join("");
+  document.getElementById("local-timeline").innerHTML=LRINGS.map(function(ring){var rl=ring.ids.map(function(id){return leads.find(function(l){return l.id===id;});}).filter(Boolean);return'<div class="zsec"><div class="ztop"><div class="znm">'+ring.nm+'</div><span class="zbadge">'+ring.badge+'</span></div><div class="zdesc">'+ring.desc+'</div><div class="tlwrap">'+rl.map(mkTLCard).join("")+"</div></div>";}).join("");
+}
+function ikpi(v,c,l){return'<div class="ikpi"><div class="ikv" style="color:'+c+'">'+v+'</div><div class="ikl">'+l+"</div></div>";}
+function mkICard(l,rank){var cls=scCls(l.score||0),bc=l.score>=80?"red":l.score>=65?"warm":"";return'<div class="ic '+cls+'" onclick="od2('+l.id+')"><div class="ic-rk">Rank #'+rank+'</div><div class="ic-nm">'+e(l.name)+'</div><div class="ic-sb">'+e(l.suburb||"")+(l.driveTime?" &middot; "+l.driveTime:"")+' &middot; '+e(l.address||"")+'</div><div class="ic-sr"><div><div class="ic-sc '+cls+'">'+(l.score||"-")+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--m);text-transform:uppercase;letter-spacing:1px;margin-top:2px">BBM Score</div></div>'+pill(l.stage,true)+"</div>"+(l.stars!=null?'<div class="ic-stars"><span class="ic-sv '+starCol(l.stars)+'">&starf; '+l.stars+'</span><span style="font-size:11px;color:var(--t3)">('+l.reviews.toLocaleString()+" reviews)</span></div>":"")+'<div class="ic-issue">'+e(l.keyIssue||l.nextAction||"")+'</div><button class="ic-btn '+bc+'" onclick="event.stopPropagation();od2('+l.id+')">Open Lead</button></div>';}
+function mkTimeline(list,groupKey){var groups={};list.forEach(function(l){var k=l[groupKey]||"Other";if(!groups[k])groups[k]=[];groups[k].push(l);});return Object.keys(groups).map(function(k){return'<div class="zsec"><div class="ztop"><div class="znm">'+e(k)+"</div></div>"+'<div class="tlwrap">'+groups[k].sort(function(a,b){return(b.score||0)-(a.score||0);}).map(mkTLCard).join("")+"</div></div>";}).join("");}
+function mkTLCard(l){var cls=l.score>=75?"hot":l.score>=55?"warm":"cold";return'<div class="tlcard '+cls+'" onclick="tlTog(this)"><div class="tltop"><div><div class="tlnm">'+e(l.name)+'</div><div class="tlsb">'+e(l.suburb||"")+" &middot; "+e(l.type||"")+"</div></div>"+'<div class="tlmeta">'+(l.stars!=null?'<span style="font-family:var(--m);font-size:14px;font-weight:800;color:'+(l.stars<=2.5?"var(--lost)":l.stars<=3.5?"var(--warn)":"var(--won)")+'"">&starf; '+l.stars+"</span>":"")+(l.driveTime?'<span style="font-size:11px;font-weight:700;color:var(--t3)">'+l.driveTime+"</span>":"")+pill(l.stage,true)+"</div></div>"+'<div class="tlexp">&#9660; Expand</div>'+'<div class="tlbody">'+(l.keyIssue?'<div class="tlcq"><div class="tlql">Key Issue</div>'+e(l.keyIssue)+"</div>":"")+'<div class="tlact"><span>'+e(l.nextAction||"Approach this target")+'</span><span class="tlsc '+cls+'">'+(l.score||"-")+"</span></div>"+'<button class="btn btn-cy btn-sm" style="margin-top:8px;width:100%" onclick="event.stopPropagation();od2('+l.id+')">Open Lead</button>'+"</div></div>";}
+function tlTog(card){var b=card.querySelector(".tlbody"),ex=card.querySelector(".tlexp");if(b.classList.contains("open")){b.classList.remove("open");ex.innerHTML="&#9660; Expand";}else{b.classList.add("open");ex.innerHTML="&#9650; Collapse";}}
+function showTab(view,name,el){document.querySelectorAll("#v-"+view+" .itab").forEach(function(t){t.classList.remove("on");});document.querySelectorAll("#v-"+view+" .icont").forEach(function(c){c.classList.remove("on");});el.classList.add("on");var ct=document.getElementById(view+"-"+name);if(ct)ct.classList.add("on");}
+
+/* ===== ROUTES ===== */
+var ROUTES=[
+  {label:"A",nm:"Nollamara Loop",desc:"4 stops. Under 10 min from home. Do this first.",col:"#3EC6F0",stops:[
+    {nm:"Flinders Square",sb:"Yokine",t:"4 min",sc:82,pt:"Ask for the centre manager. Say you noticed some reviews mention the Coles section and you would love five minutes to show what you do differently.",addr:"30 Wiluna St Yokine"},
+    {nm:"Nollamara Shopping Centre",sb:"Nollamara",t:"2 min",sc:78,pt:"Same approach. Tell them you clean the area and their centre keeps coming up. You want to introduce yourself before you are fully booked.",addr:"78-90 Hillsborough Dr Nollamara"},
+    {nm:"Nollamara Medical Centre",sb:"Nollamara",t:"3 min",sc:72,pt:"Medical pitch. High traffic medical means the highest hygiene risk. You document everything and provide a signed checklist after every single clean.",addr:"82 Hillsborough Dr Nollamara"},
+    {nm:"Global Resource Support",sb:"Nollamara",t:"3 min",sc:45,pt:"Office pitch. Small business owners often do not realise their cleaner is cutting corners. You do not and you can prove it.",addr:"18 Nollamara Ave Nollamara"}
+  ]},
+  {label:"B",nm:"Mirrabooka Cluster",desc:"4 stops. 7 min from home. Highest scoring cluster in the local sweep.",col:"#E84040",stops:[
+    {nm:"Dept of Communities",sb:"Mirrabooka",t:"7 min",sc:88,pt:"Government pitch. Say you work with government facilities across Perth and you would like to leave your details with the facilities manager.",addr:"5 Milldale Way Mirrabooka"},
+    {nm:"Services Australia",sb:"Mirrabooka",t:"7 min",sc:80,pt:"Same government pitch. Ask for the building or facilities contact specifically. Not the counter. Combine with Dept of Communities on the same trip.",addr:"8 Sudbury Rd Mirrabooka"},
+    {nm:"Workskil Australia",sb:"Mirrabooka",t:"7 min",sc:76,pt:"Tell them you are not there for Workskil specifically. You would like to speak to whoever manages the building at 22 Chesterfield Road.",addr:"22 Chesterfield Rd Mirrabooka"},
+    {nm:"Chesterfield Commercial Centre",sb:"Mirrabooka",t:"7 min",sc:58,pt:"Centre manager pitch. Multi-tenant building means one decision maker who covers every tenant. That is a strong anchor contract.",addr:"1 Chesterfield Rd Mirrabooka"}
+  ]},
+  {label:"C",nm:"Afternoon Sweep",desc:"5 stops. 10 to 12 min. Morley, Dianella and Maylands.",col:"#F5A623",stops:[
+    {nm:"Dianella Family Medical",sb:"Dianella",t:"10 min",sc:74,pt:"195 reviews at 3.8 stars. Leave a checklist and a card. Ask to speak with the practice manager specifically.",addr:"294 Grand Promenade Dianella"},
+    {nm:"Morley Gateway",sb:"Morley",t:"11 min",sc:70,pt:"Declining centre pitch. You can provide the same standard at a price that makes sense for a centre going through a transition. Prove it in the first month.",addr:"60 Russell St Morley"},
+    {nm:"Maylands Commercial Centre",sb:"Maylands",t:"12 min",sc:68,pt:"Empty shopfronts pitch. Presentation matters when you are trying to attract new tenants. You make that easier.",addr:"168 Guildford Rd Maylands"},
+    {nm:"City of Bayswater Civic Centre",sb:"Morley",t:"11 min",sc:60,pt:"Council pitch. Ask for the facilities or building manager. Do not approach the front desk. Register on Tenders WA before going.",addr:"61 Broun Ave Morley"},
+    {nm:"Brightwater Care Group HQ",sb:"Inglewood",t:"10 min",sc:55,pt:"Aged care pitch. You provide documented cleaning evidence for every visit. That is exactly what compliance requires.",addr:"2A Walter Rd W Inglewood"}
+  ]}
+];
+function rRoutes(){document.getElementById("routeGrid").innerHTML=ROUTES.map(function(r){return'<div class="rcard"><div class="rhead" style="background:'+r.col+'"><h3>Route '+r.label+" "+r.nm+'</h3><p>'+r.desc+"</p></div>"+r.stops.map(function(s,i){return'<div class="rstop"><div class="rsn" style="background:'+r.col+'">'+(i+1)+'</div><div class="rsm"><div class="rsnm">'+e(s.nm)+'</div><div class="rssb">'+e(s.sb)+" &middot; "+s.t+" &middot; Score "+s.sc+'</div><div class="rspt">'+e(s.pt)+'</div></div><a href="https://maps.google.com/?q='+encodeURIComponent(s.addr)+'" target="_blank" style="flex-shrink:0"><button class="btn btn-gh btn-xs" style="margin-left:6px;margin-top:2px">&#128205;</button></a></div>';}).join("")+"</div>";}).join("");}
+
+/* ===== EMAIL TEMPLATES ===== */
+var TMPLS=[
+  {nm:"Retail Centre Pain Hook",tag:"Retail Email 1",subj:"Quick question about your Google reviews",
+   body:"Hi [Name],\n\nI noticed a few things coming up in your Google reviews that caught my attention. Dirty bathrooms, bins not emptied, that sort of thing.\n\nI run Big Blue Mop and we specialise in exactly those problems for shopping centres around Perth. What we do differently is we photograph and document everything after every clean so you have actual proof it got done properly.\n\nI am in your area regularly and would love five minutes of your time. Would a quick chat this week work?\n\nThanks,\nJesse\nBig Blue Mop\n0410 260 800\nbigbluemop@gmail.com"},
+  {nm:"Retail Centre Documentation",tag:"Retail Email 2",subj:"Most cleaners just clean and leave",
+   body:"Hi [Name],\n\nJust following up from my note earlier in the week.\n\nHere is the thing most cleaners do not do. They clean and leave. No record, no photo, no way for you to know if the job was actually done right.\n\nWe photograph everything and leave a signed checklist after every visit. So if a staff member says something was missed, you have proof either way.\n\nWorth a quick call to show you what that looks like in practice?\n\nJesse\nBig Blue Mop\n0410 260 800"},
+  {nm:"Medical Compliance Angle",tag:"Medical Email 1",subj:"Cleaning documentation for medical practices",
+   body:"Hi [Name],\n\nFor medical practices the bar is just higher. Patients notice, regulators notice and so does your team.\n\nWe work with medical practices to provide a documented cleaning system where every visit is photographed and signed off. Touch points, bathrooms, waiting areas, all of it covered and on record.\n\nIf you would like to see a sample of what that looks like for a practice your size I am happy to put one together.\n\nJesse\nBig Blue Mop\n0410 260 800\nbigbluemop@gmail.com"},
+  {nm:"Government Tender Warmup",tag:"Government Email 1",subj:"Perth commercial cleaning ahead of your next contract review",
+   body:"Hi [Name],\n\nI know government cleaning usually goes through a proper tender process and I am not here to sidestep that.\n\nI am Jesse from Big Blue Mop, a Perth commercial cleaning company. We are currently working in your area and wanted to get on your radar before your next contract review comes around.\n\nWe are registered on Tenders WA and can provide references from current government clients.\n\nWould a quick conversation make sense?\n\nJesse\nBig Blue Mop\n0410 260 800"},
+  {nm:"Office Performance Pitch",tag:"Office Email 1",subj:"Your team works better in a space that feels looked after",
+   body:"Hi [Name],\n\nIt sounds obvious but people genuinely do better work when their space feels clean and cared for. Less sick days, better focus, staff who feel like the business invests in them.\n\nWe keep offices in Perth clean on a schedule that works around your team. Quiet, consistent and we document every visit.\n\nIf you are curious about what that looks like I am happy to walk you through it.\n\nJesse\nBig Blue Mop\n0410 260 800"},
+  {nm:"Declining Centre Cost Pitch",tag:"Commercial Email 1",subj:"Same standard for less. No lock-in.",
+   body:"Hi [Name],\n\nI noticed [Centre Name] has been going through some changes recently. Fewer tenants, tighter margins.\n\nI am Jesse from Big Blue Mop and we work with centres in exactly this kind of transition. You get the same cleaning standard you would expect from anyone but at a price that actually makes sense right now.\n\nNo long contracts. Prove it in the first month and go from there.\n\nWould ten minutes this week be worth it?\n\nJesse\nBig Blue Mop\n0410 260 800"},
+  {nm:"Strata Portfolio Pitch",tag:"Strata Email 1",subj:"One cleaner for every building you manage",
+   body:"Hi [Name],\n\nI work with a few strata managers and property groups around Perth who got tired of having a different contractor for every building.\n\nWith Big Blue Mop you get one relationship, one standard and everything documented after every clean across all your properties.\n\nIf you manage multiple buildings and want to simplify things I would love a quick call.\n\nJesse\nBig Blue Mop\n0410 260 800\nbigbluemop@gmail.com"}
+];
+function rTmpls(){
+  document.getElementById("tmplL").innerHTML=TMPLS.map(function(t,i){
+    return'<div class="ti '+(aTmpl===i?"on":"")+'" onclick="sTmpl('+i+')"><div class="tin">'+e(t.tag)+'</div><div class="tim">'+e(t.nm)+'</div><div class="tid">'+e(t.subj.substring(0,44))+"...</div></div>";
+  }).join("");
+  sTmpl(aTmpl);
+}
+function sTmpl(i){
+  aTmpl=i;var t=TMPLS[i];
+  document.querySelectorAll(".ti").forEach(function(el,idx){el.classList.toggle("on",idx===i);});
+  document.getElementById("tmplP").innerHTML=
+    '<div style="max-width:600px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div>'+
+    '<div style="font-family:var(--m);font-size:8px;color:var(--cyd);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">'+e(t.tag)+'</div>'+
+    '<div style="font-size:18px;font-weight:900;color:var(--tx)">'+e(t.nm)+"</div></div>"+
+    '<button class="btn btn-cy btn-sm" onclick="copyT()">&#128203; Copy</button></div>'+
+    '<div class="tpl">Subject Line</div><div class="tps">'+e(t.subj)+"</div>"+
+    '<div class="tpl">Body</div><div class="tpb">'+e(t.body)+"</div>"+
+    '<div style="margin-top:13px;padding:11px 13px;background:var(--cyp);border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--cyd)">Replace [Name] and [Centre Name] before sending.</div></div>';
+}
+function copyT(){
+  var t=TMPLS[aTmpl];
+  navigator.clipboard.writeText("Subject: "+t.subj+"\n\n"+t.body).then(function(){toast("Copied to clipboard","i");}).catch(function(){toast("Copy failed","w");});
+}
+function expCSV(){
+  if(!leads.length){toast("No leads","w");return;}
+  var h=["Name","Suburb","Type","Score","Stars","Reviews","Zone","Stage","Quote","Next Action","Next Date","Contact","Phone","Email","Address","Key Issue","Notes"];
+  var rows=leads.map(function(l){return[l.name,l.suburb||"",l.type||"",l.score!=null?l.score:"",l.stars!=null?l.stars:"",l.reviews!=null?l.reviews:"",l.zone||"",l.stage,l.quote!=null?l.quote:"",l.nextAction||"",l.nextDate||"",l.contact||"",l.phone||"",l.email||"",l.address||"",l.keyIssue||"",(l.notes||"").replace(/\n/g," ")];});
+  var csv=[h].concat(rows).map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(",");}).join("\n");
+  var blob=new Blob([csv],{type:"text/csv"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="bbm-leads.csv";a.click();URL.revokeObjectURL(url);toast("CSV exported","s");
+}
+function toast(msg,type){
+  var el=document.createElement("div");el.className="toast "+type;
+  var icons={s:"&#9989;",w:"&#9888;",i:"&#8505;"};
+  el.innerHTML="<span>"+(icons[type]||"&#9989;")+"</span><span>"+e(msg)+"</span>";
+  document.getElementById("twrap").appendChild(el);
+  setTimeout(function(){el.style.opacity="0";el.style.transform="translateX(10px)";el.style.transition="all .2s";setTimeout(function(){el.remove();},220);},2400);
+}
+usb();rHome();
+document.getElementById("ev-date").value=new Date().toISOString().slice(0,10);
+document.getElementById("ct-start").value=new Date().toISOString().slice(0,10);
+
+
+// ── IMPORT FUNCTIONS ──
+function oImport(){
+  document.getElementById('importJson').value='';
+  document.getElementById('importPreview').style.display='none';
+  document.getElementById('importError').style.display='none';
+  document.getElementById('importDoBtn').style.display='none';
+  document.getElementById('importBg').style.display='flex';
+}
+function cImport(){
+  document.getElementById('importBg').style.display='none';
+}
+function previewImport(){
+  var raw=document.getElementById('importJson').value.trim();
+  var prev=document.getElementById('importPreview');
+  var err=document.getElementById('importError');
+  var btn=document.getElementById('importDoBtn');
+  prev.style.display='none'; err.style.display='none'; btn.style.display='none';
+  if(!raw){err.textContent='Nothing pasted yet. Copy the JSON file contents and paste above.';err.style.display='block';return;}
+  try{
+    var parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed)){throw new Error('Expected an array of leads');}
+    var existing=new Set(leads.map(l=>l.name.toLowerCase().trim()));
+    var newOnes=parsed.filter(l=>!existing.has(l.name.toLowerCase().trim()));
+    var dupes=parsed.length-newOnes.length;
+    prev.innerHTML='<strong>&#10003; Valid JSON</strong><br>'+
+      parsed.length+' leads in file<br>'+
+      newOnes.length+' new leads to import<br>'+
+      (dupes>0?dupes+' already in your database (will be skipped)':'All leads are new');
+    prev.style.display='block';
+    if(newOnes.length>0) btn.style.display='inline-flex';
+    else{err.textContent='All leads in this file are already in your database.';err.style.display='block';}
+  }catch(e){
+    err.textContent='Could not read the JSON: '+e.message+'. Make sure you copied the entire file contents.';
+    err.style.display='block';
+  }
+}
+function doImport(){
+  var raw=document.getElementById('importJson').value.trim();
+  try{
+    var parsed=JSON.parse(raw);
+    var existing=new Set(leads.map(l=>l.name.toLowerCase().trim()));
+    var newOnes=parsed.filter(l=>!existing.has(l.name.toLowerCase().trim()));
+    // assign new IDs to avoid conflicts
+    var maxId=leads.reduce((m,l)=>Math.max(m,l.id||0),0);
+    newOnes.forEach((l,i)=>{
+      l.id=maxId+i+1;
+      l.activity=l.activity||[];
+      l.createdAt=l.createdAt||new Date().toISOString().slice(0,10);
+    });
+    leads=leads.concat(newOnes);
+    persist();
+    cImport();
+    toast(newOnes.length+' new leads imported successfully!');
+    rHome();
+  }catch(e){
+    document.getElementById('importError').textContent='Import failed: '+e.message;
+    document.getElementById('importError').style.display='block';
+  }
+}
+
+</script>
+</body>
+</html>
