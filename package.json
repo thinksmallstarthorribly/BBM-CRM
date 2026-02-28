@@ -1,0 +1,11 @@
+{
+  "name": "bbm-crm",
+  "version": "1.0.0",
+  "description": "Big Blue Mop CRM",
+  "scripts": {
+    "lint": "htmlhint '*.html'"
+  },
+  "devDependencies": {
+    "htmlhint": "^1.1.4"
+  }
+}
