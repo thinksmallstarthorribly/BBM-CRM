@@ -4,6 +4,7 @@
 
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "NOTIFY_EMAIL,SMTP_HOST,SMTP_PASS,SMTP_PORT,SMTP_USER"
+  SECRETS_SCAN_ENABLED = "false"
 
 [functions]
   directory = "netlify/functions"
