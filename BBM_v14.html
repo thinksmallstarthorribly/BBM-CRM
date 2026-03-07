@@ -498,6 +498,8 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
     <div class="ni" id="ni-intel" onclick="go('intel')"><span class="ni-ic">&#128269;</span><span>Perth Metro</span></div>
     <div class="ni" id="ni-local" onclick="go('local')"><span class="ni-ic">&#128205;</span><span>Local Hitlist</span></div>
     <div class="ni" id="ni-routes" onclick="go('routes')"><span class="ni-ic">&#128506;</span><span>Route Planner</span></div>
+    <div class="nl">Website</div>
+    <div class="ni" id="ni-checklist" onclick="go('checklist')"><span class="ni-ic">&#128203;</span><span>Checklist Responses</span><span class="ni-badge" id="clBadge" style="display:none"></span></div>
   </div>
   <div class="sb-bot">
     <div class="sbt">Live Snapshot</div>
@@ -763,6 +765,45 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
       <div class="iv-top"><div class="iv-h">Walk-In Route Planner</div><div class="iv-d">3 batched routes &middot; Fuel efficient &middot; Pitch scripts included</div></div>
       <div style="flex:1;overflow-y:auto;padding:18px"><div class="rgrid" id="routeGrid"></div></div>
     </div>
+    <!-- CHECKLIST RESPONSES -->
+    <div class="view" id="v-checklist" style="overflow-y:auto;padding:18px;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0">
+        <div>
+          <div style="font-size:18px;font-weight:900;color:var(--cyd);font-family:var(--m)">Psychic Cleaner Responses</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:2px">All checklist submissions from the website and email campaigns</div>
+        </div>
+        <button class="btn btn-cy btn-sm" onclick="rChecklist()" style="flex-shrink:0">&#8635; Refresh</button>
+      </div>
+      <!-- KPI strip -->
+      <div id="cl-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex-shrink:0"></div>
+      <!-- Filter bar -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+        <button class="fc on" id="clf-all" onclick="clFilter('all',this)">All</button>
+        <button class="fc" id="clf-HOT" onclick="clFilter('HOT',this)">&#128308; Hot</button>
+        <button class="fc" id="clf-WARM" onclick="clFilter('WARM',this)">&#128993; Warm</button>
+        <button class="fc" id="clf-COLD" onclick="clFilter('COLD',this)">&#128994; Looking Good</button>
+        <button class="fc" id="clf-website" onclick="clFilter('website',this)">&#127760; Website</button>
+        <button class="fc" id="clf-email" onclick="clFilter('email',this)">&#9993; Email Campaign</button>
+      </div>
+      <!-- Table -->
+      <div class="tw" style="flex:1;border-radius:12px;overflow:hidden">
+        <table class="lt"><thead><tr>
+          <th>Business</th>
+          <th>Contact</th>
+          <th>Email</th>
+          <th>Score</th>
+          <th>Tier</th>
+          <th>Channel</th>
+          <th>Date</th>
+          <th></th>
+        </tr></thead><tbody id="cl-tbody"></tbody></table>
+      </div>
+      <div id="cl-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--t3)">
+        <div style="font-size:36px;margin-bottom:12px">&#128203;</div>
+        <div style="font-weight:700;color:var(--t2);margin-bottom:6px">No responses yet</div>
+        <div style="font-size:13px">Responses will appear here once prospects complete the Psychic Cleaner checklist.</div>
+      </div>
+    </div>
   </div>
 </div>
 </div>
@@ -893,7 +934,7 @@ function go(v){
   document.querySelectorAll(".ni[id]").forEach(function(el){el.classList.remove("on");});
   var ve=document.getElementById("v-"+v);if(ve)ve.classList.add("on");
   var ne=document.getElementById("ni-"+v);if(ne)ne.classList.add("on");
-  var titles={'invoicing':'Invoicing & Jobs',home:"Command Centre",cal:"Calendar",kanban:"Lead Lifecycle",leads:"All Leads",timeline:"Lead Timeline",finder:"Lead Finder",templates:"Email Templates",intel:"Perth Metro Intelligence",local:"Local Hitlist",routes:"Route Planner"};
+  var titles={'invoicing':'Invoicing & Jobs',home:"Command Centre",cal:"Calendar",kanban:"Lead Lifecycle",leads:"All Leads",timeline:"Lead Timeline",finder:"Lead Finder",templates:"Email Templates",intel:"Perth Metro Intelligence",local:"Local Hitlist",routes:"Route Planner",checklist:"Checklist Responses"};
   document.getElementById("ttl").textContent=titles[v]||v;
   document.getElementById("srch").style.display=v==="leads"?"flex":"none";
   document.getElementById("expB").style.display=v==="leads"?"inline-flex":"none";
@@ -907,7 +948,8 @@ function go(v){
   if(v==="local")rLocal();
   if(v==="routes")rRoutes();
   if(v==="invoicing")rInvoicing();
-  if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbOverlay').classList.remove('open');}
+  if(v==="checklist")rChecklist();
+  if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbOverlay').classList.remove('on');}
 }
 function rHome(){
   usb();
@@ -2571,6 +2613,110 @@ function doImport(){
   }
 }
 
+/* ===== CHECKLIST RESPONSES ===== */
+var _clData=[], _clFilter='all';
+
+function rChecklist(){
+  var tbody=document.getElementById('cl-tbody');
+  var empty=document.getElementById('cl-empty');
+  var kpis=document.getElementById('cl-kpis');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--t3)">Loading&#8230;</td></tr>';
+  empty.style.display='none';
+
+  fetch('/.netlify/functions/checklist-responses')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      _clData=Array.isArray(data)?data:[];
+      // Update badge on nav
+      var badge=document.getElementById('clBadge');
+      if(_clData.length>0){badge.textContent=_clData.length;badge.style.display='';}else{badge.style.display='none';}
+      _renderClTable();
+    })
+    .catch(function(){
+      tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--lost)">Could not load responses. Check your Netlify function is deployed.</td></tr>';
+    });
+}
+
+function clFilter(f,btn){
+  _clFilter=f;
+  document.querySelectorAll('#v-checklist .fc').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  _renderClTable();
+}
+
+function _renderClTable(){
+  var tbody=document.getElementById('cl-tbody');
+  var empty=document.getElementById('cl-empty');
+  var kpis=document.getElementById('cl-kpis');
+
+  var rows=_clData.slice().reverse(); // newest first
+
+  // KPIs
+  var hot=_clData.filter(function(r){return r.tier==='HOT';}).length;
+  var warm=_clData.filter(function(r){return r.tier==='WARM';}).length;
+  var cold=_clData.filter(function(r){return r.tier==='COLD'||r.pct>=80;}).length;
+  var fromEmail=_clData.filter(function(r){return r.source&&r.source!=='website';}).length;
+  kpis.innerHTML=
+    '<div class="kpi" style="--kc:#E74C3C"><div class="kl">Hot Leads</div><div class="kv">'+hot+'</div><div class="ks">Critical issues found</div></div>'+
+    '<div class="kpi" style="--kc:#F39C12"><div class="kl">Warm Leads</div><div class="kv">'+warm+'</div><div class="ks">Gaps detected</div></div>'+
+    '<div class="kpi" style="--kc:#27ae60"><div class="kl">Cold</div><div class="kv">'+cold+'</div><div class="ks">Tracking well</div></div>'+
+    '<div class="kpi" style="--kc:var(--cy)"><div class="kl">Via Email</div><div class="kv">'+fromEmail+'</div><div class="ks">From campaigns</div></div>';
+
+  // Filter
+  if(_clFilter==='HOT') rows=rows.filter(function(r){return r.tier==='HOT';});
+  else if(_clFilter==='WARM') rows=rows.filter(function(r){return r.tier==='WARM';});
+  else if(_clFilter==='COLD') rows=rows.filter(function(r){return r.tier==='COLD'||r.pct>=80;});
+  else if(_clFilter==='website') rows=rows.filter(function(r){return !r.source||r.source==='website';});
+  else if(_clFilter==='email') rows=rows.filter(function(r){return r.source&&r.source!=='website';});
+
+  if(!rows.length){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+
+  var tierCol={'HOT':'#E74C3C','WARM':'#F39C12','COLD':'#27ae60'};
+  var tierEmoji={'HOT':'🔴','WARM':'🟡','COLD':'🟢'};
+
+  tbody.innerHTML=rows.map(function(r){
+    var tc=tierCol[r.tier]||'#27ae60';
+    var te=tierEmoji[r.tier]||'🟢';
+    var tierLabel=r.tier==='HOT'?'Critical':r.tier==='WARM'?'Gaps':'Good';
+    var srcLabel=(!r.source||r.source==='website')?'&#127760; Website':'&#9993; '+r.source.replace(/-/g,' ');
+    var dt=r.submittedAt?new Date(r.submittedAt).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'2-digit'}):'—';
+    var mailLink='mailto:'+r.email+'?subject='+encodeURIComponent('Re: Your Cleaning Audit — '+(r.bizName||''));
+    return '<tr>'+
+      '<td><strong>'+esc(r.bizName||'—')+'</strong></td>'+
+      '<td>'+esc(r.contactName||'—')+'</td>'+
+      '<td><a href="'+mailLink+'" style="color:var(--cyd);text-decoration:none">'+esc(r.email||'—')+'</a></td>'+
+      '<td><strong style="color:'+tc+'">'+r.pct+'%</strong></td>'+
+      '<td><span style="background:'+tc+'1a;color:'+tc+';border:1.5px solid '+tc+'40;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:800">'+te+' '+tierLabel+'</span></td>'+
+      '<td style="font-size:12px;color:var(--t2)">'+srcLabel+'</td>'+
+      '<td style="font-size:12px;color:var(--t3)">'+dt+'</td>'+
+      '<td><button class="btn btn-cy btn-sm" onclick="clAddToLeads('+JSON.stringify(r).replace(/"/g,"&quot;")+')" title="Add to leads pipeline">+ Lead</button></td>'+
+      '</tr>';
+  }).join('');
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function clAddToLeads(r){
+  // Pre-fill the Add Lead modal with checklist data
+  document.getElementById('f-name').value=r.bizName||'';
+  document.getElementById('f-contact').value=r.contactName||'';
+  document.getElementById('f-email').value=r.email||'';
+  document.getElementById('f-score').value=r.pct||'';
+  var issueNote=r.tier==='HOT'?'HOT — '+r.fails+' areas failed on Psychic Cleaner checklist':
+               r.tier==='WARM'?'WARM — '+r.fails+' areas flagged on Psychic Cleaner checklist':
+               'COLD — Scored well on checklist ('+r.pct+'%)';
+  document.getElementById('f-keyissue').value=issueNote;
+  var srcNote='Source: '+((!r.source||r.source==='website')?'Website direct':'Email campaign — '+r.source);
+  document.getElementById('f-notes').value=srcNote+(r.submittedAt?'\nSubmitted: '+new Date(r.submittedAt).toLocaleString('en-AU'):'');
+  document.getElementById('f-stage').value='Replied';
+  document.getElementById('mttl').textContent='Add Checklist Lead';
+  document.getElementById('modalBg').classList.add('on');
+}
 
 </script>
 </body>

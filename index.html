@@ -1153,6 +1153,7 @@ function updateScore(){
 function submitChecklist(){
   var email=document.getElementById('contactEmail').value||'';
   var biz=document.getElementById('bizName').value||'';
+  var name=document.getElementById('contactName').value||'';
   if(!email){alert('Please enter your email so we can send your results.');return;}
   var s=calcScore();
   var btn=document.getElementById('submitBtn');
@@ -1181,6 +1182,14 @@ function submitChecklist(){
     document.getElementById('resultAction').textContent='Done';
     document.getElementById('resultAction').onclick=function(e){e.preventDefault();ov.classList.remove('vis');};
   }
+  // Detect source channel from URL param (?src=email-campaign-name or blank = website)
+  var src=new URLSearchParams(window.location.search).get('src')||'website';
+  // Fire and forget — send to Netlify function for email + CRM storage
+  fetch('/.netlify/functions/checklist-submit',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bizName:biz,contactName:name,email:email,pct:s.pct,tier:s.tier,fails:s.fails,answers:answers,source:src})
+  }).catch(function(){/* silent — result shown to user regardless */});
 }
 
 function fSubmit(e){
