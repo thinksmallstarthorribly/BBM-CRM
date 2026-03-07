@@ -2193,7 +2193,7 @@ function mkDFE(id,field,val,label,inputType){
   var display=val?('<a href="'+(t==="tel"?"tel:"+val:t==="email"?"mailto:"+val:"#")+'" style="color:var(--cy);text-decoration:none">'+e(val)+"</a>"):'<span style="color:var(--warn);font-style:italic">Not set</span>';
   return'<div><div class="dfl">'+label+'</div>'
     +'<div id="dfe-view-'+id+'-'+field+'" class="df-edit-row"><div class="dfv">'+display+'</div>'
-    +'<button class="df-pencil" onclick="startInlineEdit('+id+',\''+field+'\',\''+e(val||'')+'\',\''+label+'\',\''+t+'\')">&#9998;</button></div>'
+    +'<button class="df-pencil" onclick="startInlineEdit('+id+',\''+field+'\')">&#9998;</button></div>'
     +'<div id="dfe-edit-'+id+'-'+field+'" style="display:none">'
     +'<input class="dfe" id="dfe-inp-'+id+'-'+field+'" type="'+t+'" value="'+e(val||'')+'" placeholder="'+label+'" onkeydown="if(event.key===\'Enter\')saveInlineEdit('+id+',\''+field+'\');if(event.key===\'Escape\')cancelInlineEdit('+id+',\''+field+'\')">'
     +'<div style="display:flex;gap:6px;margin-top:5px">'
@@ -2201,11 +2201,12 @@ function mkDFE(id,field,val,label,inputType){
     +'<button class="btn btn-gh btn-xs" onclick="cancelInlineEdit('+id+',\''+field+'\')">Cancel</button>'
     +'</div></div></div>';
 }
-function startInlineEdit(id,field,val,label,t){
+function startInlineEdit(id,field){
   document.getElementById("dfe-view-"+id+"-"+field).style.display="none";
   document.getElementById("dfe-edit-"+id+"-"+field).style.display="block";
   var inp=document.getElementById("dfe-inp-"+id+"-"+field);
-  inp.value=val;
+  var l=leads.find(function(x){return x.id===id;});
+  inp.value=l?(l[field]||""):"";
   inp.focus();
 }
 function cancelInlineEdit(id,field){
