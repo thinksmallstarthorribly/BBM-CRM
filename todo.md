@@ -1,0 +1,58 @@
+# Big Blue Mop — Home of Engines TODO
+
+- [x] Inspect the existing BBM_v14.html interface and preserve its navigation names and useful interaction patterns.
+- [x] Restrict all CRM data and operations to the authenticated owner account for Alex Cooper.
+- [x] Create a persistent relational schema for leads, lead interactions, checklist responses, clients, jobs, invoices, expenses, campaigns, email activity, review intelligence, templates, routes, and AI briefings.
+- [x] Apply and verify all database migrations without storing customer data in localStorage.
+- [x] Build a mobile-responsive dark charcoal and blue application shell with an accessible collapsible sidebar.
+- [x] Match the required navigation views: Home, Lead Lifecycle, All Leads, Lead Timeline, Templates, Invoicing, Intel, Local, Routes, Checklist Responses, and Calendar.
+- [x] Build the Home dashboard with active leads, active clients, monthly revenue, outstanding invoices, pipeline summary, upcoming work, and morning briefing.
+- [x] Build the Lead Lifecycle Kanban in the exact order New, Contacted, Quote Sent, Won, Active Client, Lost.
+- [x] Support creating, viewing, editing, moving, and filtering leads with business name, contact name, email, phone, checklist score, tier, notes, source, and timestamps.
+- [x] Record and display a complete interaction timeline for every lead.
+- [x] Build the All Leads searchable and filterable table view.
+- [x] Build the cross-lead Lead Timeline view.
+- [x] Build reusable message and follow-up Templates management.
+- [x] Build Checklist Responses with ingestion status and source payload details.
+- [x] Build full client profiles with linked lead history and financial summaries.
+- [x] Build job scheduling and completed-job history per client.
+- [x] Build the Calendar view for scheduled and completed client jobs.
+- [x] Track job revenue, labour cost, material cost, other cost, and margin.
+- [x] Track invoices with invoice number, amount, sent date, due date, and paid or outstanding status.
+- [x] Build the Invoicing view with outstanding totals and status controls.
+- [x] Build monthly, quarterly, and yearly revenue reporting.
+- [x] Build expense creation, categorisation, filtering, and totals.
+- [x] Build profit and loss reporting from actual revenue and expenses.
+- [x] Track campaign source and attribution for each lead.
+- [x] Build Intel for Google review signals, poor-cleaning opportunity detection, and hot-lead prioritisation.
+- [x] Build the Local view using the provided Google Places integration component and Places API.
+- [x] Build the Routes view for location-based prospect and client planning.
+- [x] Log inbound and outbound email follow-up activity against leads and clients.
+- [x] Implement secure Google Sheets ingestion for Psychic Cleaner Checklist submissions.
+- [x] Prevent duplicate checklist imports through stable source identifiers and ingestion audit records.
+- [x] Implement the AI morning briefing using current CRM data.
+- [x] Implement AI-assisted lead scoring from Google review and CRM signals.
+- [x] Implement AI-generated follow-up suggestions grounded in lead history.
+- [x] Add useful loading, empty, success, and error states to every major view.
+- [x] Add Vitest coverage for owner-only access, lead stage order, pipeline mutations, financial calculations, ingestion deduplication, and AI fallback behaviour.
+- [x] Run TypeScript checks, automated tests, and a production build.
+- [x] Verify desktop, tablet, and mobile layouts visually.
+- [x] Verify keyboard accessibility, readable contrast, and focus states.
+- [x] Create the single final pre-delivery checkpoint after all implementation work is complete.
+- [x] Deploy the fullstack application with persistent database hosting.
+- [ ] Synchronize final source code to the thinksmallstarthorribly/BBM-CRM GitHub repository without committing credentials.
+- [x] Document required Google Sheets, Google Places, email, and deployment configuration.
+- [x] Add an Upcoming Work panel to the Home dashboard using scheduled jobs from the persistent database.
+- [x] Verify the Home dashboard presents KPIs, outstanding invoices, pipeline, upcoming work, and morning briefing together.
+- [x] Show stored source payload details for every Psychic Cleaner Checklist response.
+- [x] Present explicit checklist ingestion status, ingestion timestamp, and linked lead state.
+- [x] Load and display the originating lead interaction history inside linked client profiles.
+- [x] Show originating lead source, checklist score, notes, and stage progression on the client profile.
+- [x] Log a stage-change interaction when a lead is converted to an Active Client.
+- [x] Add an explicit stage progression view on linked client profiles including the final Active Client transition.
+- [x] Add expense filtering by financial period, category, and client or vendor on the Financials view.
+- [x] Recalculate and display expense totals for the active filters with a clear no-match state.
+- [x] Rename sidebar labels and corresponding page titles to the exact required names: Home, Lead Lifecycle, All Leads, Lead Timeline, Templates, Invoicing, Intel, Local, Routes, Checklist Responses, and Calendar.
+- [x] Re-verify the final navigation naming against the user’s exact BBM_v14 requirement.
+- [x] Add an explicit visible Home page title while retaining the command-centre hero message.
+- [x] Document a final audit of sidebar labels and visible page titles for every required BBM_v14 view.

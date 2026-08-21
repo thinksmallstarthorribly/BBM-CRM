@@ -1,0 +1,10 @@
+import { PageIntro } from "@/components/crm/PageIntro";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { trpc } from "@/lib/trpc";
+import { Clock3 } from "lucide-react";
+
+export default function LeadTimeline() {
+  const timeline = trpc.leads.timeline.useQuery();
+  return <div className="space-y-5"><PageIntro eyebrow="Interaction history" title="Lead Timeline" description="A single chronological audit trail of calls, emails, notes, quotes and pipeline changes across every lead." /><div className="engine-card rounded-2xl p-4 sm:p-6">{timeline.isLoading ? <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div> : timeline.data?.length ? <div className="relative space-y-4 before:absolute before:bottom-3 before:left-[19px] before:top-3 before:w-px before:bg-border">{timeline.data.map(item => <article key={item.id} className="relative flex gap-4"><div className="z-10 mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-background text-primary"><Clock3 className="h-4 w-4"/></div><div className="min-w-0 flex-1 rounded-xl border border-border/70 bg-black/10 p-4"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start"><div><p className="font-semibold text-white">{item.businessName}</p><div className="mt-1 flex items-center gap-2"><Badge variant="outline" className="text-[10px] capitalize">{item.type.replace("_", " ")}</Badge>{item.subject ? <span className="text-xs text-muted-foreground">{item.subject}</span> : null}</div></div><time className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{new Date(item.occurredAt).toLocaleString("en-AU")}</time></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground/80">{item.body}</p></div></article>)}</div> : <div className="py-20 text-center text-sm text-muted-foreground">Interactions will appear here as leads are worked.</div>}</div></div>;
+}

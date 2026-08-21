@@ -1,0 +1,4 @@
+export function PageIntro({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: React.ReactNode }) {
+  const exactTitle = ({ "Email Templates": "Templates", "Perth Metro": "Intel", "Local Hitlist": "Local", "Route Planner": "Routes" } as Record<string, string>)[title] ?? title;
+  return <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div className="max-w-3xl"><p className="font-display text-xs font-bold uppercase tracking-[0.26em] text-primary">{eyebrow}</p><h1 className="mt-1 font-display text-4xl font-extrabold uppercase leading-none text-white sm:text-5xl">{exactTitle}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p></div>{actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}</div>;
+}
