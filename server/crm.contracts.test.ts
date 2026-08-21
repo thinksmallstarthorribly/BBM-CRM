@@ -5,6 +5,7 @@ import type { TrpcContext } from "./_core/context";
 import { appRouter } from "./routers";
 import { deterministicLeadScore, fallbackBriefing } from "./services/ai";
 import { checklistDeduplicationKey } from "./services/checklistIngestion";
+import { isConfiguredOwner } from "./ownerProcedure";
 
 function nonOwnerContext(): TrpcContext {
   const now = new Date();
@@ -40,6 +41,12 @@ describe("CRM contracts", () => {
     const briefing = fallbackBriefing({ activeLeads: 3, outstanding: 2, upcomingJobs: 1, overdue: 1 });
     expect(briefing.summary).toContain("3 active leads");
     expect(briefing.risks[0]).toContain("1 invoices are overdue");
+  });
+
+  it("recognises Alex's authentic Manus account by verified email and display name", () => {
+    expect(isConfiguredOwner({ openId: "BY83yin2D4LNoyBC4FDNjD", email: "thinksmallstarthorribly@gmail.com", name: "Alex" })).toBe(true);
+    expect(isConfiguredOwner({ openId: "unrelated", email: "thinksmallstarthorribly@gmail.com", name: "Alex Cooper" })).toBe(false);
+    expect(isConfiguredOwner({ openId: "unrelated", email: "other@example.com", name: "Alex" })).toBe(false);
   });
 
   it("rejects an authenticated admin who is not the configured owner", async () => {

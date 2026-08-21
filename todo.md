@@ -40,7 +40,7 @@
 - [x] Verify keyboard accessibility, readable contrast, and focus states.
 - [x] Create the single final pre-delivery checkpoint after all implementation work is complete.
 - [x] Deploy the fullstack application with persistent database hosting.
-- [ ] Synchronize final source code to the thinksmallstarthorribly/BBM-CRM GitHub repository without committing credentials.
+- [x] Synchronize final source code to the thinksmallstarthorribly/BBM-CRM GitHub repository without committing credentials.
 - [x] Document required Google Sheets, Google Places, email, and deployment configuration.
 - [x] Add an Upcoming Work panel to the Home dashboard using scheduled jobs from the persistent database.
 - [x] Verify the Home dashboard presents KPIs, outstanding invoices, pipeline, upcoming work, and morning briefing together.
@@ -56,3 +56,6 @@
 - [x] Re-verify the final navigation naming against the user’s exact BBM_v14 requirement.
 - [x] Add an explicit visible Home page title while retaining the command-centre hero message.
 - [x] Document a final audit of sidebar labels and visible page titles for every required BBM_v14 view.
+- [x] Recognize Alex’s authentic Manus account with email thinksmallstarthorribly@gmail.com and display name Alex as the sole CRM owner.
+- [x] Add regression coverage for owner recognition by Alex’s authenticated email and rejection of unrelated accounts.
+- [ ] Republish and synchronize the owner-recognition fix to BBM-CRM.
