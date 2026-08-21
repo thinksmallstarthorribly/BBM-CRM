@@ -58,4 +58,24 @@
 - [x] Document a final audit of sidebar labels and visible page titles for every required BBM_v14 view.
 - [x] Recognize Alex’s authentic Manus account with email thinksmallstarthorribly@gmail.com and display name Alex as the sole CRM owner.
 - [x] Add regression coverage for owner recognition by Alex’s authenticated email and rejection of unrelated accounts.
-- [ ] Republish and synchronize the owner-recognition fix to BBM-CRM.
+- [x] Republish and synchronize the owner-recognition fix to BBM-CRM.
+- [ ] Remove every deployed runtime dependency on Manus authentication, database, Maps proxy, AI APIs, notifications, schedules, and storage.
+- [ ] Replace Manus authentication with secure standalone single-owner authentication for Alex Cooper.
+- [ ] Make PostgreSQL the standalone persistent database with portable migrations, initialization, backup, and restore procedures.
+- [ ] Re-audit BBM_v14 Lead Finder, Google Places workflow, review signals, hot-lead scoring, Kanban interactions, and dashboard utilities.
+- [ ] Make Lead Finder and the Marketing Engine primary navigation and dashboard workflows rather than secondary tools.
+- [ ] Implement server-side Google Places search, place details, review retrieval, pagination, and safe API-key handling.
+- [ ] Detect cleanliness, hygiene, toilet, bin, dust, floor, odour, and maintenance complaints in Google review text.
+- [ ] Calculate transparent review opportunity scores and explain why each business is a hot, warm, or low-priority lead.
+- [ ] Support geographic, business-type, rating, review-count, keyword, cleanliness-signal, and score filters for Perth prospecting.
+- [ ] Convert discovered businesses into deduplicated CRM leads while preserving Google place data, matching review evidence, source search, and score history.
+- [ ] Rebuild the Home dashboard with marketing-engine KPIs, hot opportunities, prospecting activity, pipeline velocity, follow-up workload, revenue, invoices, upcoming jobs, and briefing panels.
+- [ ] Enrich Lead Lifecycle cards and lead profiles with review evidence, opportunity scores, campaign source, contact status, and next actions.
+- [ ] Replace built-in AI dependencies with provider-neutral optional AI configuration and deterministic fallbacks that work without any AI service.
+- [ ] Replace platform scheduling with an independently hosted scheduler for checklist reconciliation and daily briefings.
+- [ ] Create a production Dockerfile and Docker Compose stack for the CRM and PostgreSQL.
+- [ ] Provide environment-variable templates with no committed credentials and document Google Places API restrictions.
+- [ ] Document independent deployment to a standard Docker host, domain/TLS setup, database backup, restore, upgrades, and disaster recovery.
+- [ ] Add standalone health checks, first-run owner setup, and production security controls.
+- [ ] Validate the complete application outside Manus-specific development services.
+- [ ] Synchronize the independently deployable release to thinksmallstarthorribly/BBM-CRM without exposing the GitHub PAT or Google credentials.
