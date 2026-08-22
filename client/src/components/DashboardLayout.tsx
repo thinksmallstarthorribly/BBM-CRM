@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BrainCircuit, Building2, CalendarDays, CircleDollarSign, ClipboardCheck, Columns3, Gauge, History, ListFilter, LogOut, Mail, Map, MapPinned, PanelLeft, ReceiptText, Route, Search, type LucideIcon } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -57,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading) return <DashboardLayoutSkeleton />;
 
   if (!user) {
-    return <div className="engine-grid flex min-h-screen items-center justify-center p-5"><div className="engine-card flex w-full max-w-md flex-col items-center gap-8 rounded-3xl p-8 sm:p-10"><div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary font-display text-2xl font-extrabold tracking-tight text-primary-foreground shadow-[0_12px_40px_rgba(95,172,219,.25)]">BBM</div><div className="space-y-3 text-center"><p className="font-display text-xs font-bold uppercase tracking-[0.28em] text-primary">Home of Engines</p><h1 className="font-display text-4xl font-extrabold uppercase tracking-tight">Command centre locked</h1><p className="text-sm leading-6 text-muted-foreground">Secure single-owner access for Big Blue Mop. Sign in with Alex Cooper&apos;s authorised account.</p></div><Button onClick={startLogin} size="lg" className="w-full">Unlock Home of Engines</Button></div></div>;
+    return <LoginScreen />;
   }
 
   if (user.role !== "admin") {
@@ -65,6 +64,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}><DashboardLayoutContent sidebarWidth={sidebarWidth} setSidebarWidth={setSidebarWidth}>{children}</DashboardLayoutContent></SidebarProvider>;
+}
+
+function LoginScreen() {
+  const { login, loginError, loginPending } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await login(email, password);
+  }
+  return (
+    <div className="engine-grid flex min-h-screen items-center justify-center p-5">
+      <div className="engine-card flex w-full max-w-md flex-col items-center gap-8 rounded-3xl p-8 sm:p-10">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary font-display text-2xl font-extrabold tracking-tight text-primary-foreground shadow-[0_12px_40px_rgba(95,172,219,.25)]">BBM</div>
+        <div className="space-y-3 text-center">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.28em] text-primary">Home of Engines</p>
+          <h1 className="font-display text-4xl font-extrabold uppercase tracking-tight">Command centre locked</h1>
+          <p className="text-sm leading-6 text-muted-foreground">Secure single-owner access for Big Blue Mop. Sign in with your owner account.</p>
+        </div>
+        <form onSubmit={onSubmit} className="flex w-full flex-col gap-3">
+          <input type="email" autoComplete="username" required placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary" />
+          <input type="password" autoComplete="current-password" required placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary" />
+          {loginError ? <p className="text-center text-sm text-destructive">{loginError}</p> : null}
+          <Button type="submit" size="lg" className="w-full" disabled={loginPending}>{loginPending ? "Signing in…" : "Unlock Home of Engines"}</Button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function DashboardLayoutContent({ children, sidebarWidth, setSidebarWidth }: { children: React.ReactNode; sidebarWidth: number; setSidebarWidth: (width: number) => void }) {
@@ -104,7 +131,7 @@ function DashboardLayoutContent({ children, sidebarWidth, setSidebarWidth }: { c
     <div className="relative" ref={sidebarRef}>
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" disableTransition={isResizing}>
         <SidebarHeader className="h-[76px] justify-center border-b border-sidebar-border px-3">
-          <div className="flex w-full items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary font-display text-sm font-extrabold text-primary-foreground shadow-[0_8px_28px_rgba(95,172,219,.2)]">BBM</div>{!isCollapsed ? <div className="min-w-0 flex-1"><span className="block truncate font-display text-base font-extrabold uppercase tracking-tight text-white">Big Blue Mop</span><span className="block text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">Home of Engines</span></div> : null}<button onClick={toggleSidebar} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Toggle navigation"><PanelLeft className="h-4 w-4 text-muted-foreground" /></button></div>
+          <div className="flex w-full items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary font-display text-sm font-extrabold text-primary-foreground shadow-[0_8px_28px_rgba(95,172,219,.2)]">BBM</div>{!isCollapsed ? <div className="min-w-0 flex-1"><span className="block truncate font-display text-base font-extrabold uppercase tracking-tight text-white">Big Blue Mop</span><span className="block text-[9px] font-semibold uppercase tracking-[0.22em] text-primary">Home of Engines</span></div> : null}<button onClick={toggleSidebar} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Toggle navigation"><PanelLeft className="h-4 w-4 text-muted-foreground" /></button></div>
         </SidebarHeader>
         <SidebarContent className="gap-0 px-2 py-3">
           {menuGroups.map(group => <div key={group.label} className="mb-3 last:mb-0">{!isCollapsed ? <div className="px-3 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">{group.label}</div> : null}<SidebarMenu>{group.items.map(item => { const active = location === item.path || (item.path !== "/" && location.startsWith(`${item.path}/`)); return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={active} onClick={() => setLocation(item.path)} tooltip={item.label} className="h-9 rounded-lg border-l-2 border-transparent font-medium transition-all data-[active=true]:border-primary data-[active=true]:bg-primary/10 data-[active=true]:text-white"><item.icon className={`h-4 w-4 ${active ? "text-primary" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu></div>)}
