@@ -1,41 +1,34 @@
 import {
   boolean,
-  double,
+  doublePrecision,
   index,
-  int,
+  integer,
   json,
-  mysqlEnum,
-  mysqlTable,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   uniqueIndex,
   varchar,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
-export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
-
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const leadStageEnum = pgEnum("lead_stage", [
+  "New", "Contacted", "Quote Sent", "Won", "Active Client", "Lost",
+]);
+export const interactionTypeEnum = pgEnum("interaction_type", [
+  "note", "call", "email", "meeting", "quote", "stage_change", "system",
+]);
+export const clientStatusEnum = pgEnum("client_status", ["active", "paused", "former"]);
+export const jobStatusEnum = pgEnum("job_status", ["scheduled", "completed", "cancelled"]);
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "draft", "sent", "outstanding", "paid", "overdue", "void",
+]);
+export const campaignStatusEnum = pgEnum("campaign_status", [
+  "planned", "active", "paused", "completed",
+]);
+export const emailDirectionEnum = pgEnum("email_direction", ["inbound", "outbound"]);
+export const routeStatusEnum = pgEnum("route_status", ["draft", "planned", "completed"]);
 
 export const leadStageValues = [
   "New",
@@ -46,11 +39,27 @@ export const leadStageValues = [
   "Lost",
 ] as const;
 
-export const leads = mysqlTable(
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  passwordHash: text("passwordHash"),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: userRoleEnum("role").default("user").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+export const leads = pgTable(
   "leads",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     businessName: varchar("businessName", { length: 255 }).notNull(),
     contactName: varchar("contactName", { length: 255 }),
     email: varchar("email", { length: 320 }),
@@ -58,24 +67,24 @@ export const leads = mysqlTable(
     address: varchar("address", { length: 500 }),
     suburb: varchar("suburb", { length: 120 }),
     businessType: varchar("businessType", { length: 160 }),
-    stage: mysqlEnum("stage", leadStageValues).default("New").notNull(),
-    checklistScore: int("checklistScore"),
+    stage: leadStageEnum("stage").default("New").notNull(),
+    checklistScore: integer("checklistScore"),
     tier: varchar("tier", { length: 64 }),
     notes: text("notes"),
     source: varchar("source", { length: 160 }).default("Manual").notNull(),
-    campaignId: int("campaignId"),
-    quoteAmountCents: int("quoteAmountCents"),
+    campaignId: integer("campaignId"),
+    quoteAmountCents: integer("quoteAmountCents"),
     nextAction: varchar("nextAction", { length: 500 }),
     nextActionAt: timestamp("nextActionAt"),
     googlePlaceId: varchar("googlePlaceId", { length: 255 }),
-    googleRating: double("googleRating"),
-    googleReviewCount: int("googleReviewCount"),
-    reviewSignalScore: int("reviewSignalScore"),
-    aiLeadScore: int("aiLeadScore"),
+    googleRating: doublePrecision("googleRating"),
+    googleReviewCount: integer("googleReviewCount"),
+    reviewSignalScore: integer("reviewSignalScore"),
+    aiLeadScore: integer("aiLeadScore"),
     aiScoreReason: text("aiScoreReason"),
     lostReason: text("lostReason"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     index("leads_owner_stage_idx").on(table.ownerId, table.stage),
@@ -85,13 +94,13 @@ export const leads = mysqlTable(
   ],
 );
 
-export const leadInteractions = mysqlTable(
+export const leadInteractions = pgTable(
   "leadInteractions",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    leadId: int("leadId").notNull(),
-    type: mysqlEnum("type", ["note", "call", "email", "meeting", "quote", "stage_change", "system"]).notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    leadId: integer("leadId").notNull(),
+    type: interactionTypeEnum("type").notNull(),
     subject: varchar("subject", { length: 255 }),
     body: text("body").notNull(),
     occurredAt: timestamp("occurredAt").defaultNow().notNull(),
@@ -103,11 +112,11 @@ export const leadInteractions = mysqlTable(
   ],
 );
 
-export const checklistResponses = mysqlTable(
+export const checklistResponses = pgTable(
   "checklistResponses",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     externalId: varchar("externalId", { length: 255 }).notNull(),
     sourceSheet: varchar("sourceSheet", { length: 255 }),
     submittedAt: timestamp("submittedAt").notNull(),
@@ -115,11 +124,11 @@ export const checklistResponses = mysqlTable(
     contactName: varchar("contactName", { length: 255 }),
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 64 }),
-    score: int("score"),
+    score: integer("score"),
     tier: varchar("tier", { length: 64 }),
     campaignSource: varchar("campaignSource", { length: 160 }),
     payload: json("payload"),
-    leadId: int("leadId"),
+    leadId: integer("leadId"),
     ingestedAt: timestamp("ingestedAt").defaultNow().notNull(),
   },
   table => [
@@ -128,12 +137,12 @@ export const checklistResponses = mysqlTable(
   ],
 );
 
-export const clients = mysqlTable(
+export const clients = pgTable(
   "clients",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    leadId: int("leadId"),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    leadId: integer("leadId"),
     businessName: varchar("businessName", { length: 255 }).notNull(),
     contactName: varchar("contactName", { length: 255 }),
     email: varchar("email", { length: 320 }),
@@ -142,12 +151,12 @@ export const clients = mysqlTable(
     address: varchar("address", { length: 500 }),
     suburb: varchar("suburb", { length: 120 }),
     abn: varchar("abn", { length: 32 }),
-    status: mysqlEnum("status", ["active", "paused", "former"]).default("active").notNull(),
+    status: clientStatusEnum("status").default("active").notNull(),
     serviceSummary: text("serviceSummary"),
     notes: text("notes"),
     startedAt: timestamp("startedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     index("clients_owner_status_idx").on(table.ownerId, table.status),
@@ -155,24 +164,24 @@ export const clients = mysqlTable(
   ],
 );
 
-export const jobs = mysqlTable(
+export const jobs = pgTable(
   "jobs",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    clientId: int("clientId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    clientId: integer("clientId").notNull(),
     title: varchar("title", { length: 255 }).notNull(),
-    status: mysqlEnum("status", ["scheduled", "completed", "cancelled"]).default("scheduled").notNull(),
+    status: jobStatusEnum("status").default("scheduled").notNull(),
     scheduledStart: timestamp("scheduledStart").notNull(),
     scheduledEnd: timestamp("scheduledEnd"),
     completedAt: timestamp("completedAt"),
-    revenueCents: int("revenueCents").default(0).notNull(),
-    labourCostCents: int("labourCostCents").default(0).notNull(),
-    materialCostCents: int("materialCostCents").default(0).notNull(),
-    otherCostCents: int("otherCostCents").default(0).notNull(),
+    revenueCents: integer("revenueCents").default(0).notNull(),
+    labourCostCents: integer("labourCostCents").default(0).notNull(),
+    materialCostCents: integer("materialCostCents").default(0).notNull(),
+    otherCostCents: integer("otherCostCents").default(0).notNull(),
     notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     index("jobs_owner_client_idx").on(table.ownerId, table.clientId),
@@ -180,23 +189,23 @@ export const jobs = mysqlTable(
   ],
 );
 
-export const invoices = mysqlTable(
+export const invoices = pgTable(
   "invoices",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    clientId: int("clientId").notNull(),
-    jobId: int("jobId"),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    clientId: integer("clientId").notNull(),
+    jobId: integer("jobId"),
     invoiceNumber: varchar("invoiceNumber", { length: 80 }).notNull(),
-    amountCents: int("amountCents").notNull(),
-    status: mysqlEnum("status", ["draft", "sent", "outstanding", "paid", "overdue", "void"]).default("draft").notNull(),
+    amountCents: integer("amountCents").notNull(),
+    status: invoiceStatusEnum("status").default("draft").notNull(),
     issuedAt: timestamp("issuedAt"),
     sentAt: timestamp("sentAt"),
     dueAt: timestamp("dueAt"),
     paidAt: timestamp("paidAt"),
     notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     uniqueIndex("invoices_owner_number_unique").on(table.ownerId, table.invoiceNumber),
@@ -205,17 +214,17 @@ export const invoices = mysqlTable(
   ],
 );
 
-export const expenses = mysqlTable(
+export const expenses = pgTable(
   "expenses",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    clientId: int("clientId"),
-    jobId: int("jobId"),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    clientId: integer("clientId"),
+    jobId: integer("jobId"),
     category: varchar("category", { length: 120 }).notNull(),
     vendor: varchar("vendor", { length: 255 }),
     description: varchar("description", { length: 500 }).notNull(),
-    amountCents: int("amountCents").notNull(),
+    amountCents: integer("amountCents").notNull(),
     incurredAt: timestamp("incurredAt").notNull(),
     taxDeductible: boolean("taxDeductible").default(true).notNull(),
     notes: text("notes"),
@@ -224,33 +233,33 @@ export const expenses = mysqlTable(
   table => [index("expenses_owner_incurred_idx").on(table.ownerId, table.incurredAt)],
 );
 
-export const campaigns = mysqlTable(
+export const campaigns = pgTable(
   "campaigns",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     channel: varchar("channel", { length: 120 }).notNull(),
     sourceCode: varchar("sourceCode", { length: 120 }).notNull(),
-    status: mysqlEnum("status", ["planned", "active", "paused", "completed"]).default("active").notNull(),
-    spendCents: int("spendCents").default(0).notNull(),
+    status: campaignStatusEnum("status").default("active").notNull(),
+    spendCents: integer("spendCents").default(0).notNull(),
     startedAt: timestamp("startedAt"),
     endedAt: timestamp("endedAt"),
     notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [uniqueIndex("campaigns_owner_source_unique").on(table.ownerId, table.sourceCode)],
 );
 
-export const emailActivities = mysqlTable(
+export const emailActivities = pgTable(
   "emailActivities",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    leadId: int("leadId"),
-    clientId: int("clientId"),
-    direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    leadId: integer("leadId"),
+    clientId: integer("clientId"),
+    direction: emailDirectionEnum("direction").notNull(),
     externalMessageId: varchar("externalMessageId", { length: 255 }),
     subject: varchar("subject", { length: 500 }),
     snippet: text("snippet"),
@@ -265,19 +274,19 @@ export const emailActivities = mysqlTable(
   ],
 );
 
-export const reviewSignals = mysqlTable(
+export const reviewSignals = pgTable(
   "reviewSignals",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    leadId: int("leadId"),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    leadId: integer("leadId"),
     googlePlaceId: varchar("googlePlaceId", { length: 255 }).notNull(),
     businessName: varchar("businessName", { length: 255 }).notNull(),
     address: varchar("address", { length: 500 }),
-    rating: double("rating"),
-    reviewCount: int("reviewCount"),
-    cleaningMentionCount: int("cleaningMentionCount").default(0).notNull(),
-    signalScore: int("signalScore").default(0).notNull(),
+    rating: doublePrecision("rating"),
+    reviewCount: integer("reviewCount"),
+    cleaningMentionCount: integer("cleaningMentionCount").default(0).notNull(),
+    signalScore: integer("signalScore").default(0).notNull(),
     keyIssues: text("keyIssues"),
     rawExcerpt: text("rawExcerpt"),
     lastCheckedAt: timestamp("lastCheckedAt").defaultNow().notNull(),
@@ -289,51 +298,51 @@ export const reviewSignals = mysqlTable(
   ],
 );
 
-export const templates = mysqlTable(
+export const templates = pgTable(
   "templates",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     category: varchar("category", { length: 120 }).default("Follow-up").notNull(),
     subject: varchar("subject", { length: 500 }),
     body: text("body").notNull(),
     isActive: boolean("isActive").default(true).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("templates_owner_active_idx").on(table.ownerId, table.isActive)],
 );
 
-export const routes = mysqlTable(
+export const routes = pgTable(
   "routes",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     routeDate: timestamp("routeDate"),
-    status: mysqlEnum("status", ["draft", "planned", "completed"]).default("draft").notNull(),
+    status: routeStatusEnum("status").default("draft").notNull(),
     notes: text("notes"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [index("routes_owner_date_idx").on(table.ownerId, table.routeDate)],
 );
 
-export const routeStops = mysqlTable(
+export const routeStops = pgTable(
   "routeStops",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
-    routeId: int("routeId").notNull(),
-    leadId: int("leadId"),
-    clientId: int("clientId"),
-    position: int("position").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
+    routeId: integer("routeId").notNull(),
+    leadId: integer("leadId"),
+    clientId: integer("clientId"),
+    position: integer("position").notNull(),
     label: varchar("label", { length: 255 }).notNull(),
     address: varchar("address", { length: 500 }).notNull(),
-    latitude: double("latitude"),
-    longitude: double("longitude"),
-    plannedMinutes: int("plannedMinutes").default(15).notNull(),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    plannedMinutes: integer("plannedMinutes").default(15).notNull(),
     notes: text("notes"),
   },
   table => [
@@ -342,11 +351,11 @@ export const routeStops = mysqlTable(
   ],
 );
 
-export const aiBriefings = mysqlTable(
+export const aiBriefings = pgTable(
   "aiBriefings",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     briefingDate: timestamp("briefingDate").notNull(),
     summary: text("summary").notNull(),
     priorities: json("priorities"),
@@ -358,18 +367,18 @@ export const aiBriefings = mysqlTable(
   table => [uniqueIndex("briefings_owner_date_unique").on(table.ownerId, table.briefingDate)],
 );
 
-export const automationSettings = mysqlTable(
+export const automationSettings = pgTable(
   "automationSettings",
   {
-    id: int("id").autoincrement().primaryKey(),
-    ownerId: int("ownerId").notNull(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: integer("ownerId").notNull(),
     sheetsSyncEnabled: boolean("sheetsSyncEnabled").default(false).notNull(),
     sheetsWebhookLastReceivedAt: timestamp("sheetsWebhookLastReceivedAt"),
     morningBriefingEnabled: boolean("morningBriefingEnabled").default(false).notNull(),
     morningBriefingCronTaskUid: varchar("morningBriefingCronTaskUid", { length: 65 }),
     lastMorningBriefingAt: timestamp("lastMorningBriefingAt"),
     timezone: varchar("timezone", { length: 80 }).default("Australia/Perth").notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   table => [
     uniqueIndex("automation_owner_unique").on(table.ownerId),
