@@ -75,7 +75,7 @@ export async function ingestChecklistPayload(ownerId: number, payload: Checklist
       tier,
       campaignSource,
       payload,
-    }).$returningId();
+    }).returning({ id: checklistResponses.id });
     const checklistResponseId = responseRows[0]?.id;
     if (!checklistResponseId) throw new Error("Checklist response could not be stored");
 
@@ -90,7 +90,7 @@ export async function ingestChecklistPayload(ownerId: number, payload: Checklist
       tier,
       source: campaignSource ? `Psychic Cleaner Checklist · ${campaignSource}` : "Psychic Cleaner Checklist",
       notes: "Automatically ingested from the Psychic Cleaner Checklist on bigbluemop.com.au.",
-    }).$returningId();
+    }).returning({ id: leads.id });
     const leadId = leadRows[0]?.id;
     if (!leadId) throw new Error("Checklist lead could not be created");
 
@@ -106,6 +106,6 @@ export async function ingestChecklistPayload(ownerId: number, payload: Checklist
     return { checklistResponseId, leadId, duplicate: false };
   });
 
-  await db.insert(automationSettings).values({ ownerId, sheetsSyncEnabled: true, sheetsWebhookLastReceivedAt: new Date() }).onDuplicateKeyUpdate({ set: { sheetsSyncEnabled: true, sheetsWebhookLastReceivedAt: new Date() } });
+  await db.insert(automationSettings).values({ ownerId, sheetsSyncEnabled: true, sheetsWebhookLastReceivedAt: new Date() }).onConflictDoUpdate({ target: automationSettings.ownerId, set: { sheetsSyncEnabled: true, sheetsWebhookLastReceivedAt: new Date() } });
   return result;
 }
