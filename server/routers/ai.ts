@@ -38,7 +38,7 @@ export const aiRouter = router({
     } else if (taskUid) {
       await updateHeartbeatJob(taskUid, { enable: false }, sessionToken);
     }
-    await db.insert(automationSettings).values({ ownerId: ctx.user.id, morningBriefingEnabled: input.enabled, morningBriefingCronTaskUid: taskUid, timezone: "Australia/Perth" }).onDuplicateKeyUpdate({ set: { morningBriefingEnabled: input.enabled, morningBriefingCronTaskUid: taskUid, timezone: "Australia/Perth" } });
+    await db.insert(automationSettings).values({ ownerId: ctx.user.id, morningBriefingEnabled: input.enabled, morningBriefingCronTaskUid: taskUid, timezone: "Australia/Perth" }).onConflictDoUpdate({ target: automationSettings.ownerId, set: { morningBriefingEnabled: input.enabled, morningBriefingCronTaskUid: taskUid, timezone: "Australia/Perth" } });
     return { enabled: input.enabled, taskUid };
   }),
 });
