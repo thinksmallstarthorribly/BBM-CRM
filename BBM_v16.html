@@ -955,17 +955,22 @@ function go(v){
   document.getElementById("ttl").textContent=titles[v]||v;
   document.getElementById("srch").style.display=v==="leads"?"flex":"none";
   document.getElementById("expB").style.display=v==="leads"?"inline-flex":"none";
-  if(v==="home")rHome();
-  if(v==="cal")rCal();
-  if(v==="kanban")rKanban();
-  if(v==="leads")rl();
-  if(v==="timeline")rTimeline();
-  if(v==="templates")rTmpls();
-  if(v==="intel")rIntel();
-  if(v==="local")rLocal();
-  if(v==="routes")rRoutes();
-  if(v==="invoicing")rInvoicing();
-  if(v==="checklist")rChecklist();
+  try{
+    if(v==="home")rHome();
+    else if(v==="cal")rCal();
+    else if(v==="kanban")rKanban();
+    else if(v==="leads")rl();
+    else if(v==="timeline")rTimeline();
+    else if(v==="templates")rTmpls();
+    else if(v==="intel")rIntel();
+    else if(v==="local")rLocal();
+    else if(v==="routes")rRoutes();
+    else if(v==="invoicing")rInvoicing();
+    else if(v==="checklist")rChecklist();
+  }catch(err){
+    var ve2=document.getElementById("v-"+v);
+    if(ve2)ve2.innerHTML="<div style='padding:20px;color:red;font-family:monospace'>Error loading "+v+": "+err.message+"</div>";
+  }
   if(window.innerWidth<=900){var _sb=document.getElementById('sidebar');var _ov=document.getElementById('sbOverlay');_sb.classList.remove('open');_ov.classList.remove('open');}
 }
 function rHome(){
