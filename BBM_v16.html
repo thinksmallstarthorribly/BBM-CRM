@@ -24,7 +24,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sb-tg{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
 .nav{padding:8px 0;flex:1;overflow-y:auto}
 .nl{font-family:var(--m);font-size:8px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;padding:10px 15px 4px}
-.ni{display:flex;align-items:center;gap:9px;padding:9px 10px;margin:2px 7px;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;transition:all .14s;border-left:3px solid transparent;border-radius:10px;-webkit-tap-highlight-color:rgba(62,198,240,.2);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 10px;margin:2px 7px;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;transition:all .14s;border-left:3px solid transparent;border-radius:10px;-webkit-tap-highlight-color:rgba(62,198,240,.2);touch-action:manipulation;user-select:none;-webkit-user-select:none;text-decoration:none;}
 .ni:hover{color:var(--tx);background:var(--s2)}
 .ni.on{color:var(--cyd);background:var(--cyp);border-left-color:var(--cy);box-shadow:0 2px 10px rgba(62,198,240,.13)}
 .ni-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
@@ -486,20 +486,20 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
   </div>
   <div class="nav">
     <div class="nl">Workspace</div>
-    <div class="ni on" id="ni-home" onclick="go('home')" ontouchend="event.preventDefault();go('home')"><span class="ni-ic">&#9889;</span><span>Command Centre</span><span class="ni-badge" id="urgB" style="display:none"></span></div>
-    <div class="ni" id="ni-cal" onclick="go('cal')" ontouchend="event.preventDefault();go('cal')"><span class="ni-ic">&#128197;</span><span>Calendar</span></div>
-    <div class="ni" id="ni-kanban" onclick="go('kanban')" ontouchend="event.preventDefault();go('kanban')"><span class="ni-ic">&#128203;</span><span>Lead Lifecycle</span></div>
-    <div class="ni" id="ni-leads" onclick="go('leads')" ontouchend="event.preventDefault();go('leads')"><span class="ni-ic">&#127919;</span><span>All Leads</span></div>
-    <div class="ni" id="ni-timeline" onclick="go('timeline')" ontouchend="event.preventDefault();go('timeline')"><span class="ni-ic">&#9202;</span><span>Lead Timeline</span></div>
-    <div class="ni" id="ni-finder" onclick="go('finder')" ontouchend="event.preventDefault();go('finder')"><span class="ni-ic">&#128270;</span><span>Lead Finder</span></div>
-    <div class="ni" id="ni-templates" onclick="go('templates')" ontouchend="event.preventDefault();go('templates')"><span class="ni-ic">&#9993;</span><span>Email Templates</span></div>
-    <div class="ni" id="ni-invoicing" onclick="go('invoicing')" ontouchend="event.preventDefault();go('invoicing')"><span class="ni-ic">&#128176;</span><span>Invoicing</span></div>
+    <a class="ni on" id="ni-home" href="#" onclick="event.preventDefault();go('home')" style="text-decoration:none"><span class="ni-ic">&#9889;</span><span>Command Centre</span><span class="ni-badge" id="urgB" style="display:none"></span></a>
+    <a class="ni" id="ni-cal" href="#" onclick="event.preventDefault();go('cal')" style="text-decoration:none"><span class="ni-ic">&#128197;</span><span>Calendar</span></a>
+    <a class="ni" id="ni-kanban" href="#" onclick="event.preventDefault();go('kanban')" style="text-decoration:none"><span class="ni-ic">&#128203;</span><span>Lead Lifecycle</span></a>
+    <a class="ni" id="ni-leads" href="#" onclick="event.preventDefault();go('leads')" style="text-decoration:none"><span class="ni-ic">&#127919;</span><span>All Leads</span></a>
+    <a class="ni" id="ni-timeline" href="#" onclick="event.preventDefault();go('timeline')" style="text-decoration:none"><span class="ni-ic">&#9202;</span><span>Lead Timeline</span></a>
+    <a class="ni" id="ni-finder" href="#" onclick="event.preventDefault();go('finder')" style="text-decoration:none"><span class="ni-ic">&#128270;</span><span>Lead Finder</span></a>
+    <a class="ni" id="ni-templates" href="#" onclick="event.preventDefault();go('templates')" style="text-decoration:none"><span class="ni-ic">&#9993;</span><span>Email Templates</span></a>
+    <a class="ni" id="ni-invoicing" href="#" onclick="event.preventDefault();go('invoicing')" style="text-decoration:none"><span class="ni-ic">&#128176;</span><span>Invoicing</span></a>
     <div class="nl">Intelligence</div>
-    <div class="ni" id="ni-intel" onclick="go('intel')" ontouchend="event.preventDefault();go('intel')"><span class="ni-ic">&#128269;</span><span>Perth Metro</span></div>
-    <div class="ni" id="ni-local" onclick="go('local')" ontouchend="event.preventDefault();go('local')"><span class="ni-ic">&#128205;</span><span>Local Hitlist</span></div>
-    <div class="ni" id="ni-routes" onclick="go('routes')" ontouchend="event.preventDefault();go('routes')"><span class="ni-ic">&#128506;</span><span>Route Planner</span></div>
+    <a class="ni" id="ni-intel" href="#" onclick="event.preventDefault();go('intel')" style="text-decoration:none"><span class="ni-ic">&#128269;</span><span>Perth Metro</span></a>
+    <a class="ni" id="ni-local" href="#" onclick="event.preventDefault();go('local')" style="text-decoration:none"><span class="ni-ic">&#128205;</span><span>Local Hitlist</span></a>
+    <a class="ni" id="ni-routes" href="#" onclick="event.preventDefault();go('routes')" style="text-decoration:none"><span class="ni-ic">&#128506;</span><span>Route Planner</span></a>
     <div class="nl">Website</div>
-    <div class="ni" id="ni-checklist" onclick="go('checklist')" ontouchend="event.preventDefault();go('checklist')"><span class="ni-ic">&#128203;</span><span>Checklist Responses</span><span class="ni-badge" id="clBadge" style="display:none"></span></div>
+    <a class="ni" id="ni-checklist" href="#" onclick="event.preventDefault();go('checklist')" style="text-decoration:none"><span class="ni-ic">&#128203;</span><span>Checklist Responses</span><span class="ni-badge" id="clBadge" style="display:none"></span></a>
   </div>
   <div class="sb-bot">
     <div class="sbt">Live Snapshot</div>
