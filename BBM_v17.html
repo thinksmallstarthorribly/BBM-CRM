@@ -679,14 +679,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Reads the review wording Google returns (up to 5 per business). Keeps a place only when a review mentions a cleanliness or hygiene problem, and stores that quote on the lead.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Reads the review wording Google returns (up to 5 per business). Keeps a place only when a review complains about the premises — dirt, toilets, bathrooms, bins, smells, or mould on walls, floors, or rooms. A product or medical device does not count. The quote is stored on the lead.</div>
           </div>
           <div class="finder-log" id="finderLog">
             <div style="color:var(--t3);font-size:11px">Activity log will appear here when you run a scan...</div>
           </div>
         </div>
         <div class="finder-results" id="finderResults">
-          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. It keeps Perth businesses whose reviews mention a cleanliness or hygiene problem, and stores the quote.</p></div>
+          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. It keeps Perth businesses whose reviews complain about the premises being dirty or unhygienic, and stores that quote. A product or medical device does not count.</p></div>
         </div>
       </div>
     </div>
@@ -1559,9 +1559,28 @@ function hygieneLiveMatch(sentence, re){
   }
   return null;
 }
-var HYGIENE_STRONG=/\b(dirty|dirtier|dirtiest|filthy|disgusting|disgust|unclean|unhygienic|unsanitary|grimy|grubby|mouldy|moldy|mould|mold|cockroaches?|roaches|overflowing|overflowed|vomit(?:ed)?|urine|faeces|feces|gross|revolting|stench|stinks?|stunk|smelly|rubbish|garbage|pigsty|biohazard)\b/i;
+var HYGIENE_STRONG=/\b(dirty|dirtier|dirtiest|filthy|disgusting|disgust|unclean|unhygienic|unsanitary|grimy|grubby|cockroaches?|roaches|overflowing|overflowed|vomit(?:ed)?|urine|faeces|feces|gross|revolting|stench|stinks?|stunk|smelly|rubbish|garbage|pigsty|biohazard)\b/i;
 var HYGIENE_FACILITY=/\b(toilets?|bathrooms?|restrooms?|washrooms?|loos?|cubicles?|urinals?|bins?)\b/i;
-var HYGIENE_NEG=/\b(dirty|filthy|disgust\w*|unclean|terrible|awful|horrible|overflow\w*|gross|stained|stains|grimy|grubby|neglected|blocked|leaking|foul|rank|shocking|appalling|disgrace\w*|messy|mess|vomit\w*|urine|mould\w*|mold\w*|rubbish|garbage)\b|\b(never cleaned|not cleaned|wasn'?t cleaned|poorly cleaned)\b/i;
+var HYGIENE_NEG=/\b(dirty|filthy|disgust\w*|unclean|terrible|awful|horrible|overflow\w*|gross|stained|stains|grimy|grubby|neglected|blocked|leaking|foul|rank|shocking|appalling|disgrace\w*|messy|mess|vomit\w*|urine|rubbish|garbage)\b|\b(never cleaned|not cleaned|wasn'?t cleaned|poorly cleaned)\b/i;
+var HYGIENE_SURFACES=/\b(walls?|floors?|ceilings?|rooms?|bathrooms?|toilets?|restrooms?|washrooms?|carpets?|tiles?|grout|showers?|corners?|windows?|windowsills?|skirtings?|vents?|kitchens?|cubicles?|corridors?|waiting\s+rooms?|offices?|premises|buildings?|clinics?)\b/i;
+function mouldWordIsDevice(sentence){
+  if(/\b(ear\s*-?\s*moulds?|ear\s*-?\s*molds?|earmoulds?|earmolds?|hearing(?:\s+|-)?aids?\s+(?:moulds?|molds?)|dental\s+(?:moulds?|molds?)|impression\s+(?:moulds?|molds?))\b/i.test(sentence)) return true;
+  if(/\b(moulds?|molds?)\b(?:\s+\w+){0,4}\s+(taken|take|took|fitted|fitting|fit|made|ordered)\b/i.test(sentence)) return true;
+  if(/\b(taken|take|took|fitted|fitting|fit|made|ordered|impression)\b(?:\s+\w+){0,4}\s+(moulds?|molds?)\b/i.test(sentence)) return true;
+  if(/\b(moulds?|molds?)\b(?:\s+\w+){0,8}\s+(?:not\s+used|never\s+used|wasn'?t\s+used|weren'?t\s+used)\b/i.test(sentence) && !HYGIENE_SURFACES.test(sentence)) return true;
+  if(/\b(hearing(?:\s+|-)?aids?|earpieces?|ears?)\b/i.test(sentence) && /\b(moulds?|molds?|mouldy|moldy)\b/i.test(sentence) && !HYGIENE_SURFACES.test(sentence)) return true;
+  return false;
+}
+function premisesMouldComplaint(sentence){
+  if(!sentence || mouldWordIsDevice(sentence)) return false;
+  if(/\bmildews?\b/i.test(sentence)) return true;
+  if(/\b(mouldy|moldy)\b/i.test(sentence)) return true;
+  if(!/\b(moulds?|molds?)\b/i.test(sentence)) return false;
+  return HYGIENE_SURFACES.test(sentence)
+    || /\bblack\s+(moulds?|molds?)\b/i.test(sentence)
+    || /\b(moulds?|molds?)\s+(growing|everywhere)\b/i.test(sentence)
+    || /\b(?:growing|covered)\s+(?:in\s+)?(moulds?|molds?)\b/i.test(sentence);
+}
 var HYGIENE_CLEANING_BAD=/\b(not|never|wasn'?t|isn'?t|hasn'?t|haven'?t|poorly|badly)(?:\s+\w+){0,2}\s+clean(?:ed|ing|liness)?\b|\bclean(?:ing|liness)\b[^.]{0,24}\b(terrible|awful|bad|poor|disgusting|shocking|dreadful|appalling|horrible|non-?existent|lacking|slack)\b|\b(?:cleaner|cleaners)\b[^.]{0,24}\b(never|didn'?t|doesn'?t|don'?t|isn'?t|aren'?t|no-show|did not)\b/i;
 function smellIsComplaint(sentence){
   var m=hygieneLiveMatch(sentence, /\b(smells?|smelly|smelt|stench|stinks?|stunk|odours?|odors?)\b/i);
@@ -1581,6 +1600,7 @@ function sentenceComplaintScore(sentence, rating){
   if(!sentence) return 0;
   var score=0;
   if(hygieneLiveMatch(sentence, HYGIENE_STRONG)) score+=5;
+  if(premisesMouldComplaint(sentence)) score+=5;
   if(smellIsComplaint(sentence)) score+=4;
   if(hygieneWordIsComplaint(sentence)) score+=4;
   if(hygieneLiveMatch(sentence, HYGIENE_CLEANING_BAD)) score+=4;
@@ -2599,7 +2619,7 @@ function buildBody(t,l){
   if(!l)return t.body;
   var biz=l.name||"[Centre Name]";
   var issue=String(l.keyIssue||"").trim();
-  if(issue){
+  if(issue && sentenceComplaintScore(issue, l.stars)>0){
     return bespokeEmail(biz,issue,l.stars,l.reviews,l.contact||"");
   }
   var contact=l.contact||"[Name]";
@@ -2631,16 +2651,17 @@ function bespokeEmail(biz,issue,stars,reviews,contact){
 function issueSubject(issue, name){
   var q=String(issue||"").toLowerCase();
   var line="This review is still up";
-  if(/toilet|bathroom|restroom|washroom|\bloos?\b|urinal|cubicle/.test(q)) line="The toilets are still on your Google reviews";
+  if(premisesMouldComplaint(issue)) line="The mould is still on your Google reviews";
+  else if(/toilet|bathroom|restroom|washroom|\bloos?\b|urinal|cubicle/.test(q)) line="The toilets are still on your Google reviews";
   else if(/\bbins?\b|rubbish|garbage/.test(q)) line="The bins are still on your Google reviews";
   else if(/smell|stink|stench|odour|odor/.test(q)) line="The smell is still on your Google reviews";
-  else if(/dirty|filthy|hygiene|unclean|mould|mold|cleanliness/.test(q)) line="The mess is still on your Google reviews";
+  else if(/dirty|filthy|hygiene|unclean|cleanliness/.test(q)) line="The mess is still on your Google reviews";
   return name ? line+" — "+name : line;
 }
 
 function buildSubj(t,l){
   if(!l)return t.subj;
-  if(String(l.keyIssue||"").trim()) return issueSubject(l.keyIssue, l.name||"");
+  if(String(l.keyIssue||"").trim() && sentenceComplaintScore(l.keyIssue, l.stars)>0) return issueSubject(l.keyIssue, l.name||"");
   return t.subj.replace(/\[Name\]/g,l.contact||"").replace(/\[Centre Name\]/g,l.name||"");
 }
 
