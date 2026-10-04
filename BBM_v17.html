@@ -649,11 +649,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
               <div class="finder-label">Business Type</div>
               <select class="finder-sel" id="f-type">
                 <option value="shopping_mall">Shopping Centre</option>
+                <option value="store">Retail shop</option>
                 <option value="doctor" selected>Medical Centre</option>
+                <option value="dentist">Dentist</option>
                 <option value="hospital">Hospital</option>
                 <option value="local_government_office">Government Office</option>
                 <option value="real_estate_agency">Strata / Real Estate</option>
-                <option value="all">All Types</option>
+                <option value="office">Office / professional</option>
+                <option value="all">All commercial types</option>
               </select>
             </div>
 
@@ -679,14 +682,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Reads the review wording Google returns (up to 5 per business). Keeps a place only when a review complains about the premises — dirt, toilets, bathrooms, bins, smells, or mould on walls, floors, or rooms. A product or medical device does not count. The quote is stored on the lead.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Google sends at most 5 reviews per business, chosen by relevance. It does not send older reviews or the rest of the history. Cleanliness matches use only those five. Other commercial places from the same scan are listed separately, with no cleanliness email.</div>
           </div>
           <div class="finder-log" id="finderLog">
             <div style="color:var(--t3);font-size:11px">Activity log will appear here when you run a scan...</div>
           </div>
         </div>
         <div class="finder-results" id="finderResults">
-          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. It keeps Perth businesses whose reviews complain about the premises being dirty or unhygienic, and stores that quote. A product or medical device does not count.</p></div>
+          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. Cleanliness complaints are listed first. Commercial places with no premises complaint are listed underneath, for outreach.</p></div>
         </div>
       </div>
     </div>
@@ -1135,6 +1138,8 @@ var FINDER_KEY_STORAGE = 'bbm12-gkey';
 var finderImported = {};
 var finderPool = [];
 var FINDER_REVIEW_CAP = 80;
+var FINDER_COMMERCIAL_CAP = 40;
+var finderCommercial = [];
 
 // ── MASTER PERTH SUBURB COORDS (120+ suburbs) ─────────────────────────────
 var MASTER_SUBURB_COORDS = {
@@ -1682,11 +1687,30 @@ function finderScoreLead(rating, reviewCount, types){
 function finderMapType(types){
   if(!types) return 'Commercial';
   if(types.indexOf('shopping_mall') > -1) return 'Shopping Centre';
-  if(types.indexOf('hospital') > -1) return 'Medical Centre';
-  if(types.indexOf('doctor') > -1) return 'Medical Centre';
+  if(types.indexOf('store') > -1 || types.indexOf('department_store') > -1 || types.indexOf('clothing_store') > -1 || types.indexOf('supermarket') > -1 || types.indexOf('furniture_store') > -1 || types.indexOf('home_goods_store') > -1 || types.indexOf('electronics_store') > -1) return 'Retail';
+  if(types.indexOf('hospital') > -1 || types.indexOf('doctor') > -1 || types.indexOf('dentist') > -1 || types.indexOf('pharmacy') > -1 || types.indexOf('physiotherapist') > -1) return 'Medical Centre';
   if(types.indexOf('local_government_office') > -1) return 'Government Office';
   if(types.indexOf('real_estate_agency') > -1) return 'Strata Management';
+  if(types.indexOf('accounting') > -1 || types.indexOf('lawyer') > -1 || types.indexOf('insurance_agency') > -1) return 'Office';
   return 'Commercial';
+}
+var FINDER_HOME_TYPES = {premise:1,subpremise:1,street_address:1,route:1,locality:1,neighborhood:1,political:1,postal_code:1,plus_code:1,intersection:1,colloquial_area:1,floor:1,room:1,geocode:1};
+function isCommercialProspect(row){
+  var types = (row && row.rawTypes) || [];
+  var commercialHit = false;
+  var homeish = false;
+  for(var i=0;i<types.length;i++){
+    if(FINDER_HOME_TYPES[types[i]]) homeish = true;
+    else if(types[i] !== 'point_of_interest') commercialHit = true;
+  }
+  if(homeish && !commercialHit) return false;
+  if(commercialHit) return true;
+  return false;
+}
+function expandFinderTypes(type){
+  if(type === 'all') return ['shopping_mall','store','doctor','dentist','hospital','local_government_office','real_estate_agency','accounting','lawyer','insurance_agency'];
+  if(type === 'office') return ['accounting','lawyer','insurance_agency'];
+  return [type];
 }
 
 function finderLog(msg, cls){
@@ -1797,9 +1821,7 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
 
   finderLog('Suburbs: ' + suburbsToScan.map(function(s){return s.name;}).join(', '), 'info');
 
-  var typesToSearch = type === 'all'
-    ? ['shopping_mall','doctor','hospital','local_government_office','real_estate_agency']
-    : [type];
+  var typesToSearch = expandFinderTypes(type);
 
   // Load Maps JS API if not already loaded
   if(typeof google === 'undefined' || !google.maps || !google.maps.places){
@@ -1849,6 +1871,7 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
     }).length;
     var candidates = allResults.filter(function(r){
       if(existingNamesLocal.has(r.name.toLowerCase().trim())) return false;
+      if(typeof r.stars !== 'number') return false;
       if(!isNaN(maxStars) && r.stars > maxStars) return false;
       return true;
     });
@@ -1861,8 +1884,8 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
       skipped = candidates.length - FINDER_REVIEW_CAP;
       candidates = candidates.slice(0, FINDER_REVIEW_CAP);
     }
-    finderLog('Nearby search done. ' + allResults.length + ' places. ' + dupes + ' already in your leads (skipped). Reading review text for ' + candidates.length + ' lowest-rated places.' + (skipped ? ' ' + skipped + ' not checked this run — scan a smaller area to cover them.' : ''), 'info');
-    finderLog('Google only returns up to 5 reviews per business. A complaint deeper than that will not show up.', 'info');
+    finderLog('Nearby search done. ' + allResults.length + ' commercial places. ' + dupes + ' already in your leads (skipped). Reading review text for ' + candidates.length + ' lowest-rated places.' + (skipped ? ' ' + skipped + ' not checked this run — scan a smaller area to cover them.' : ''), 'info');
+    finderLog('Google Places returns at most 5 reviews per business, chosen by relevance. It does not provide older reviews or the rest of the history. Cleanliness matches use only those five.', 'info');
     readFinderReviews(candidates);
   }
 
@@ -1877,15 +1900,39 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
       box.innerHTML = '<div class="empty"><div class="ei" style="font-size:28px">&#128270;</div><p>Reading review text… ' + checked + ' / ' + candidates.length + '. Kept ' + kept.length + ' with a cleanliness complaint.</p></div>';
     }
     function finish(){
+      var quoted = kept.slice();
       if(minScore){
         kept = kept.filter(function(r){ return (r.score||0) >= minScore; });
       }
+      var belowScore = quoted.length - kept.length;
       kept.sort(function(a,b){ return (b.score||0) - (a.score||0); });
       finderPool = kept;
+      var quotedIds = {};
+      quoted.forEach(function(r){ if(r.place_id) quotedIds[r.place_id] = true; });
+      var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
+      var commercial = allResults.filter(function(r){
+        if(r.place_id && quotedIds[r.place_id]) return false;
+        if(existingNamesLocal.has((r.name||'').toLowerCase().trim())) return false;
+        if(finderImported[r.name]) return false;
+        return isCommercialProspect(r);
+      });
+      commercial.sort(function(a,b){
+        var diff = (b.reviews||0) - (a.reviews||0);
+        if(diff) return diff;
+        return String(a.name||'').localeCompare(String(b.name||''));
+      });
+      var commercialHidden = 0;
+      if(commercial.length > FINDER_COMMERCIAL_CAP){
+        commercialHidden = commercial.length - FINDER_COMMERCIAL_CAP;
+        commercial = commercial.slice(0, FINDER_COMMERCIAL_CAP);
+      }
+      finderCommercial = commercial;
       finderLog('Review check done. ' + checked + ' read. ' + kept.length + ' mention a cleanliness or hygiene problem. ' + noText + ' had no review text.', 'ok');
+      if(belowScore) finderLog(belowScore + ' cleanliness matches were under the minimum score, so they are not listed.', 'info');
+      finderLog(commercial.length + ' commercial places listed for outreach' + (commercialHidden ? ' (' + commercialHidden + ' more not shown — scan a smaller area).' : '') + '. No cleanliness email for these.', 'info');
       btn.innerHTML = '&#128270; Run Live Scan';
       btn.disabled = false;
-      renderFinderResults(kept);
+      renderFinderResults(kept, commercial);
     }
     function nextDetail(){
       if(index >= candidates.length){ finish(); return; }
@@ -1904,6 +1951,7 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
             setTimeout(request, 1500 * attempt);
             return;
           }
+          if(status === OK) place.reviewsRead = true;
           checked++;
           if(status === OK && detail && detail.reviews && detail.reviews.length){
             var hit = findHygieneQuote(detail.reviews);
@@ -1927,7 +1975,7 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
       request();
     }
     if(!candidates.length){
-      finderLog('No new places to check.', 'warn');
+      finderLog(allResults.length ? 'No rated places to read reviews for. Commercial places are still listed below.' : 'No new places to check.', 'warn');
       finish();
       return;
     }
@@ -1941,21 +1989,24 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
     service.nearbySearch(request, function(results, status){
       if(status === google.maps.places.PlacesServiceStatus.OK && results){
         results.forEach(function(place){
-          if(seen.has(place.place_id)) return;
-          if(!place.rating) return;
+          if(!place.place_id || seen.has(place.place_id)) return;
           seen.add(place.place_id);
-          var score = finderScoreLead(place.rating, place.user_ratings_total, place.types);
-          allResults.push({
+          var rated = typeof place.rating === 'number' && place.rating > 0;
+          var row = {
             place_id: place.place_id,
             name: place.name,
             suburb: suburb.name,
             type: finderMapType(place.types),
+            rawTypes: place.types || [],
             address: place.vicinity || '',
-            stars: place.rating,
+            stars: rated ? place.rating : null,
             reviews: place.user_ratings_total || 0,
-            score: score,
-            issue: ''
-          });
+            score: rated ? finderScoreLead(place.rating, place.user_ratings_total, place.types) : 0,
+            issue: '',
+            reviewsRead: false
+          };
+          if(!isCommercialProspect(row)) return;
+          allResults.push(row);
         });
         finderLog(suburb.name + ' / ' + type + ': ' + (results.length) + ' results', 'info');
       } else if(status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED){
@@ -1981,44 +2032,60 @@ function runFinderWithMaps(suburbsToScan, typesToSearch, maxStars, minScore, api
   });
 }
 
-function renderFinderResults(results){
+function complaintRating(r){
+  if(r && typeof r.reviewStars === 'number') return r.reviewStars;
+  if(r && typeof r.stars === 'number') return r.stars;
+  return null;
+}
+function placeHasPremisesComplaint(r){
+  return !!(r && r.issue && sentenceComplaintScore(r.issue, complaintRating(r)) > 0);
+}
+function commercialOutreachNote(r){
+  if(r && r.reviewsRead) return 'No premises complaint in the 5 reviews Google sent.';
+  if(!r || typeof r.stars !== 'number') return 'No Google rating. Still a commercial place to contact.';
+  return 'Reviews were not read this run. Still a commercial place to contact.';
+}
+function renderFinderResults(results, commercial){
+  results = results || [];
+  commercial = commercial || [];
   var container = document.getElementById('finderResults');
-  if(!results.length){
-    container.innerHTML = '<div class="empty"><div class="ei">&#128269;</div><p>No cleanliness or hygiene complaints in the reviews Google returned. Try another suburb, or raise the star limit. Google only sends back up to 5 reviews per business.</p></div>';
-    return;
-  }
-
   var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
+  var legend = '<div style="font-size:12px;color:var(--t2);line-height:1.45;margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--s2);border:1px solid var(--bd)">Two lists from this scan. <strong>Cleanliness complaints</strong> are first. They quote a premises problem from the 5 reviews Google sent, and <strong>Import and draft email</strong> writes that email. <strong>Commercial places to contact</strong> are the purple list underneath, badged <strong>No complaint quote</strong>. Import on that list does not draft the cleanliness email.</div>';
+
   var notYetImported = results.filter(function(r){ return !finderImported[r.name]; });
   var urgentCount = results.filter(function(r){return r.score>=80;}).length;
   var hotCount    = results.filter(function(r){return r.score>=70&&r.score<80;}).length;
   var warmCount   = results.filter(function(r){return r.score>=60&&r.score<70;}).length;
   var coldCount   = results.filter(function(r){return r.score<60;}).length;
 
-  var header = '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 14px;flex-wrap:wrap;gap:8px">'
+  var header = '<div style="margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(232,64,64,.08);border:1px solid rgba(232,64,64,.28)">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
     + '<div>'
-    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+results.length+' with a cleanliness complaint</div>'
-    + '<div style="font-size:11px;margin-top:3px">'
-    + (urgentCount?'<span style="color:var(--lost);font-weight:800">● '+urgentCount+' Urgent&nbsp;&nbsp;</span>':'')
-    + (hotCount?'<span style="color:var(--warn);font-weight:800">● '+hotCount+' Hot&nbsp;&nbsp;</span>':'')
-    + (warmCount?'<span style="color:var(--cyd);font-weight:800">● '+warmCount+' Warm&nbsp;&nbsp;</span>':'')
-    + (coldCount?'<span style="color:var(--t3)">● '+coldCount+' Cold</span>':'')
-    + '</div></div>'
-    + (notYetImported.length>0
-      ? '<button class="btn btn-cy btn-sm" id="importAllBtn" onclick="importAllFinder()">&#11015; Import All '+notYetImported.length+'</button>'
-      : '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>')
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Cleanliness complaints</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+results.length+' with a premises complaint in the 5 reviews Google sent.</div>'
+    + '</div>'
+    + (results.length && notYetImported.length>0
+      ? '<button class="btn btn-cy btn-sm" id="importAllBtn" onclick="importAllFinder()">&#11015; Import all '+notYetImported.length+'</button>'
+      : (results.length ? '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>' : ''))
+    + '</div>'
+    + (results.length ? '<div style="font-size:11px;margin-top:6px">'
+      + (urgentCount?'<span style="color:var(--lost);font-weight:800">● '+urgentCount+' Urgent&nbsp;&nbsp;</span>':'')
+      + (hotCount?'<span style="color:var(--warn);font-weight:800">● '+hotCount+' Hot&nbsp;&nbsp;</span>':'')
+      + (warmCount?'<span style="color:var(--cyd);font-weight:800">● '+warmCount+' Warm&nbsp;&nbsp;</span>':'')
+      + (coldCount?'<span style="color:var(--t3)">● '+coldCount+' Cold</span>':'')
+      + '</div>' : '')
     + '</div>';
 
-  var cards = results.map(function(r, idx){
+  var cards = results.length ? results.map(function(r, idx){
     var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
-    var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#333';
+    var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#E84040';
     var starCls = r.stars<=2.5 ? 'stars-hot' : r.stars<=3.5 ? 'stars-warm' : 'stars-ok';
     var scoreLabel = r.score>=80?'URGENT':r.score>=70?'HOT':r.score>=60?'WARM':'COLD';
     var imported = finderImported[r.name] || existingNamesLocal.has(r.name.toLowerCase().trim());
+    var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
 
     return '<div class="fr-card" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:10px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
 
-      // Always-visible header — click to expand/collapse
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="finderToggle('+idx+')">'
       + '<div style="flex:1;min-width:0">'
       + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
@@ -2033,20 +2100,18 @@ function renderFinderResults(results){
       + '</div>'
       + '</div>'
 
-      // Quick tag row — always visible
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
-      + '<span class="fr-tag '+starCls+'">★ '+r.stars+' ('+( r.reviews||0).toLocaleString()+' reviews)</span>'
+      + '<span class="fr-tag '+starCls+'">'+starText+'</span>'
       + '<span class="fr-tag">'+e(r.address)+'</span>'
       + '</div>'
       + (r.issue ? '<div class="fr-issue" style="margin-top:10px">&ldquo;'+e(r.issue)+'&rdquo;</div>' : '')
 
-      // Expandable detail panel — open by default
       + '<div id="frc-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
       + mkDetailBox('Address', e(r.address||'—'))
       + mkDetailBox('BBM Score', '<span style="color:'+scoreColor+';font-weight:800">'+r.score+' / 100 — '+scoreLabel+'</span>')
-      + mkDetailBox('Google Rating', '★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews')
-      + mkDetailBox('Next Action', 'Source contact details then send Email 1')
+      + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
+      + mkDetailBox('Next Action', 'Copy the review email, send it, then mark it sent')
       + '</div>'
       + (imported
         ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
@@ -2055,9 +2120,58 @@ function renderFinderResults(results){
       + '</div>'
 
       + '</div>';
-  }).join('');
+  }).join('') : '<div class="empty" style="padding:16px 8px"><div class="ei">&#128269;</div><p>No cleanliness complaints in the 5 reviews Google sent for each business. Google does not send older reviews. Commercial places from this scan are listed below.</p></div>';
 
-  container.innerHTML = header + cards;
+  var commercialNew = commercial.filter(function(r){ return !finderImported[r.name] && !existingNamesLocal.has((r.name||'').toLowerCase().trim()); });
+  var commercialHeader = '<div style="margin:18px 0 12px;padding:10px 12px;border-radius:10px;background:rgba(139,147,214,.16);border:1px solid #8B93D6">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Commercial places to contact</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+commercial.length+' outreach targets from the same scan. No complaint quote. Import does not draft the cleanliness email.</div>'
+    + '</div>'
+    + (commercial.length && commercialNew.length>0
+      ? '<button class="btn btn-gh btn-sm" id="importAllCommercialBtn" onclick="importAllCommercial()">&#11015; Import all '+commercialNew.length+'</button>'
+      : (commercial.length ? '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>' : ''))
+    + '</div></div>';
+
+  var commercialCards = commercial.length ? commercial.map(function(r, idx){
+    var imported = finderImported[r.name] || existingNamesLocal.has((r.name||'').toLowerCase().trim());
+    var note = commercialOutreachNote(r);
+    var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
+    return '<div class="fr-card" id="frx-'+idx+'" style="border-left:4px solid #8B93D6;margin-bottom:10px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="finderToggleCommercial('+idx+')">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
+      + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.suburb)+' · '+e(r.type)+'</div>'
+      + '</div>'
+      + '<div id="frx-arr-'+idx+'" style="font-size:14px;color:var(--t3);transition:transform .2s">▶</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+      + '<span class="fr-tag" style="background:rgba(139,147,214,.2);color:#3A4580;border-color:#8B93D6">No complaint quote</span>'
+      + '<span class="fr-tag">'+starText+'</span>'
+      + '<span class="fr-tag">'+e(r.address)+'</span>'
+      + '</div>'
+      + '<div style="margin-top:10px;font-size:12px;color:var(--t2);line-height:1.45">'+e(note)+'</div>'
+      + '<div id="frx-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+      + mkDetailBox('Address', e(r.address||'—'))
+      + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
+      + mkDetailBox('List', 'Commercial outreach. Not a cleanliness lead.')
+      + mkDetailBox('Next Action', 'Find a contact and reach out. No premises complaint on file.')
+      + '</div>'
+      + (imported
+        ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
+        : '<button class="btn btn-gh btn-sm" id="frxbtn-'+idx+'" onclick="importCommercial('+idx+')" style="width:100%;justify-content:center">Import</button>'
+      )
+      + '</div>'
+      + '</div>';
+  }).join('') : '<div class="empty" style="padding:12px 8px"><p>No extra commercial places in this scan.</p></div>';
+
+  if(!results.length && !commercial.length){
+    container.innerHTML = legend + '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. Google sends at most 5 reviews per business, chosen by relevance, and does not send older reviews.</p></div>';
+    return;
+  }
+  container.innerHTML = legend + header + cards + commercialHeader + commercialCards;
 }
 
 function mkDetailBox(label, val){
@@ -2075,20 +2189,44 @@ function finderToggle(idx){
   body.style.display = open ? 'none' : 'block';
   if(arr) arr.style.transform = open ? '' : 'rotate(90deg)';
 }
+function finderToggleCommercial(idx){
+  var body = document.getElementById('frx-body-'+idx);
+  var arr  = document.getElementById('frx-arr-'+idx);
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arr) arr.style.transform = open ? '' : 'rotate(90deg)';
+}
 
 function mkLeadFromPool(r){
+  var complaint = placeHasPremisesComplaint(r);
+  var when = new Date().toISOString().slice(0,10);
+  var notes;
+  if(complaint){
+    notes = 'Imported via Lead Finder on ' + when
+      + '\nReview: "'+r.issue+'"'+(r.reviewAuthor ? ' — '+r.reviewAuthor : '')+(r.reviewStars!=null ? ', '+r.reviewStars+' stars' : '')+(r.reviewWhen ? ', '+r.reviewWhen : '')
+      + (r.website ? '\nWebsite: '+r.website : '')
+      + (typeof r.stars === 'number' ? '\nGoogle: '+r.stars+' stars ('+r.reviews+' reviews)' : '');
+  } else {
+    notes = 'Imported via Lead Finder on ' + when
+      + '\nNo premises complaint in the reviews Google returned. Outreach target only.'
+      + (typeof r.stars === 'number' ? '\nGoogle: '+r.stars+' stars ('+(r.reviews||0)+' reviews)' : '\nNo Google rating on file.')
+      + (r.website ? '\nWebsite: '+r.website : '');
+  }
   return {
     id: nid++, name: r.name, suburb: r.suburb, type: r.type,
     score: r.score, zone: r.suburb + ' Area', address: r.address||'',
-    stars: r.stars, reviews: r.reviews, keyIssue: r.issue||'',
+    stars: typeof r.stars === 'number' ? r.stars : '', reviews: r.reviews||0,
+    keyIssue: complaint ? r.issue : '',
+    reviewStars: complaint && typeof r.reviewStars === 'number' ? r.reviewStars : '',
     contact:'', phone: r.phone||'', email:'', stage:'To Contact', quote:null, e1:'',
-    nextDate:'', nextAction:'Copy the review email, send it, then mark it sent',
-    notes:'Imported via Lead Finder on ' + new Date().toISOString().slice(0,10)
-      + (r.issue ? '\nReview: "'+r.issue+'"'+(r.reviewAuthor ? ' — '+r.reviewAuthor : '')+(r.reviewStars!=null ? ', '+r.reviewStars+' stars' : '')+(r.reviewWhen ? ', '+r.reviewWhen : '') : '')
-      + (r.website ? '\nWebsite: '+r.website : '')
-      + (r.stars ? '\nGoogle: '+r.stars+' stars ('+r.reviews+' reviews)' : ''),
-    activity:[], priority: r.score>=80?'URGENT':r.score>=70?'HIGH':'-',
-    createdAt: new Date().toISOString().slice(0,10)
+    nextDate:'',
+    nextAction: complaint
+      ? 'Copy the review email, send it, then mark it sent'
+      : 'Find a contact and reach out. No premises complaint on file.',
+    notes: notes,
+    activity:[], priority: complaint ? (r.score>=80?'URGENT':r.score>=70?'HIGH':'-') : '-',
+    createdAt: when
   };
 }
 
@@ -2096,8 +2234,9 @@ function importFinder(idx, draft){
   var r = finderPool[idx];
   if(!r) return;
   if(finderImported[r.name]){toast('Already imported','w'); return;}
-  if(!r.issue){toast('No review quote on this result','w'); return;}
+  if(!placeHasPremisesComplaint(r)){toast('No premises complaint on this result','w'); return;}
   var newLead = mkLeadFromPool(r);
+  if(!newLead.keyIssue){toast('No premises complaint on this result','w'); return;}
   leads.push(newLead);
   persist();
   finderImported[r.name] = true;
@@ -2115,11 +2254,12 @@ function importFinder(idx, draft){
 }
 
 function importAllFinder(){
-  if(!confirm("Import all found leads? This will add them to your database."))return;
+  if(!confirm("Import every cleanliness complaint? Each one is added with its review quote."))return;
   var imported = 0;
   finderPool.forEach(function(r, idx){
-    if(finderImported[r.name] || !r.issue) return;
+    if(finderImported[r.name] || !placeHasPremisesComplaint(r)) return;
     var newLead = mkLeadFromPool(r);
+    if(!newLead.keyIssue) return;
     leads.push(newLead);
     finderImported[r.name] = true;
     imported++;
@@ -2132,7 +2272,49 @@ function importAllFinder(){
   usb();
   var importAllBtn = document.getElementById('importAllBtn');
   if(importAllBtn) importAllBtn.outerHTML = '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>';
-  toast(imported + ' leads imported', 's');
+  toast(imported + ' cleanliness leads imported', 's');
+}
+
+function importCommercial(idx){
+  var r = finderCommercial[idx];
+  if(!r) return;
+  if(finderImported[r.name]){toast('Already imported','w'); return;}
+  if(placeHasPremisesComplaint(r)){toast('This one has a premises complaint. Use the cleanliness list.','w'); return;}
+  var newLead = mkLeadFromPool(r);
+  newLead.keyIssue = '';
+  newLead.reviewStars = '';
+  leads.push(newLead);
+  persist();
+  finderImported[r.name] = true;
+  var card = document.getElementById('frx-' + idx);
+  if(card) card.classList.add('imported');
+  var btn2 = document.getElementById('frxbtn-' + idx);
+  if(btn2) btn2.outerHTML = '<div style="color:var(--won);font-size:12px;font-weight:800;padding:6px 0">&#10003; Added as an outreach target. No cleanliness email.</div>';
+  usb();
+  toast(r.name + ' added as an outreach target', 's');
+}
+
+function importAllCommercial(){
+  if(!confirm("Import every commercial place? They are outreach targets. No cleanliness email is drafted."))return;
+  var imported = 0;
+  finderCommercial.forEach(function(r, idx){
+    if(finderImported[r.name] || placeHasPremisesComplaint(r)) return;
+    var newLead = mkLeadFromPool(r);
+    newLead.keyIssue = '';
+    newLead.reviewStars = '';
+    leads.push(newLead);
+    finderImported[r.name] = true;
+    imported++;
+    var card = document.getElementById('frx-' + idx);
+    if(card) card.classList.add('imported');
+    var btn2 = document.getElementById('frxbtn-' + idx);
+    if(btn2) btn2.outerHTML = '<div style="color:var(--won);font-size:12px;font-weight:800;padding:6px 0">&#10003; Added as an outreach target</div>';
+  });
+  persist();
+  usb();
+  var importAllBtn = document.getElementById('importAllCommercialBtn');
+  if(importAllBtn) importAllBtn.outerHTML = '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>';
+  toast(imported + ' outreach targets imported', 's');
 }
 
 /* ===== CALENDAR ===== */
@@ -2619,7 +2801,8 @@ function buildBody(t,l){
   if(!l)return t.body;
   var biz=l.name||"[Centre Name]";
   var issue=String(l.keyIssue||"").trim();
-  if(issue && sentenceComplaintScore(issue, l.stars)>0){
+  var rate=(typeof l.reviewStars==="number")?l.reviewStars:l.stars;
+  if(issue && sentenceComplaintScore(issue, rate)>0){
     return bespokeEmail(biz,issue,l.stars,l.reviews,l.contact||"");
   }
   var contact=l.contact||"[Name]";
@@ -2661,7 +2844,8 @@ function issueSubject(issue, name){
 
 function buildSubj(t,l){
   if(!l)return t.subj;
-  if(String(l.keyIssue||"").trim() && sentenceComplaintScore(l.keyIssue, l.stars)>0) return issueSubject(l.keyIssue, l.name||"");
+  var rate=(typeof l.reviewStars==="number")?l.reviewStars:l.stars;
+  if(String(l.keyIssue||"").trim() && sentenceComplaintScore(l.keyIssue, rate)>0) return issueSubject(l.keyIssue, l.name||"");
   return t.subj.replace(/\[Name\]/g,l.contact||"").replace(/\[Centre Name\]/g,l.name||"");
 }
 
