@@ -255,8 +255,11 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .finder-inp{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
 .finder-inp:focus{border-color:var(--cy)}
 .finder-sel{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
-.finder-log{flex:1;overflow-y:auto;padding:12px;font-family:var(--m);font-size:11px;color:var(--t2);line-height:1.8}
-.finder-log-line{padding:2px 0;border-bottom:1px solid var(--s3)}
+.finder-log{display:none}
+.finder-status{font-size:13px;font-weight:800;color:var(--tx);line-height:1.4;margin-top:8px}
+.finder-sec{background:var(--s1);border:1.5px solid var(--bd);border-radius:12px;margin-bottom:8px}
+.finder-sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;cursor:pointer}
+.finder-log-line{padding:2px 0}
 .finder-log-line.ok{color:var(--won)}.finder-log-line.warn{color:var(--warn)}.finder-log-line.info{color:var(--cyd)}
 .finder-results{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .fr-card{background:var(--s1);border:1.5px solid var(--bd);border-radius:13px;padding:14px;box-shadow:0 2px 8px rgba(62,198,240,.04);border-left:4px solid var(--bd)}
@@ -684,9 +687,8 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
             <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Cleanliness uses the type you picked, and only places whose address is in the suburb. The purple list is every office, shop, medical centre, shopping centre, and similar premises in that suburb, even if that type was not selected. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business. To look further back, use Check older reviews on that one business. Each check is paid, so the scan does not do it for you.</div>
           </div>
-          <div class="finder-log" id="finderLog">
-            <div style="color:var(--t3);font-size:11px">Activity log will appear here when you run a scan...</div>
-          </div>
+          <div id="finderStatus" class="finder-status"></div>
+          <div class="finder-log" id="finderLog" hidden></div>
         </div>
         <div class="finder-results" id="finderResults">
           <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. Cleanliness complaints in the suburb are listed first. Other commercial premises in that suburb are listed underneath, for outreach.</p></div>
@@ -1145,6 +1147,10 @@ var OLDER_REVIEWS_URL = 'https://bbm-reviews.bbm-crm.workers.dev/';
 var olderReviewBusy = false;
 var olderReviewTicket = 0;
 var finderResultGen = 0;
+var finderSuburbOrder = [];
+var finderFold = {suburb:{}, list:{}, place:{}};
+var finderStatusLocked = false;
+var finderScanSuburbName = '';
 
 // ── MASTER PERTH SUBURB COORDS (120+ suburbs) ─────────────────────────────
 var MASTER_SUBURB_COORDS = {
@@ -1842,11 +1848,46 @@ function finderSearchPlan(type){
 
 function finderLog(msg, cls){
   var log = document.getElementById('finderLog');
+  if(!log) return;
   var div = document.createElement('div');
   div.className = 'finder-log-line ' + (cls||'info');
   div.textContent = '> ' + msg;
   log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
+}
+function finderStatus(msg, lock){
+  if(finderStatusLocked && !lock) return;
+  if(lock) finderStatusLocked = true;
+  var el = document.getElementById('finderStatus');
+  if(el) el.textContent = msg || '';
+}
+function finderScanReset(){
+  finderStatusLocked = false;
+  finderScanSuburbName = '';
+}
+function finderScanUiReset(){
+  finderScanReset();
+  finderFold = {suburb:{}, list:{}, place:{}};
+  var log = document.getElementById('finderLog');
+  if(log) log.innerHTML = '';
+  var box = document.getElementById('finderResults');
+  if(box) box.innerHTML = '<div class="empty"><p>Scanning…</p></div>';
+}
+function finderScanSuburb(name, index, total){
+  if(!name || name === finderScanSuburbName) return;
+  finderScanSuburbName = name;
+  var msg = 'Scanning ' + name + '…';
+  if(total > 1) msg += ' (' + (index + 1) + ' of ' + total + ')';
+  finderStatus(msg);
+}
+function finderKey(name){
+  return String(name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'suburb';
+}
+function revealFinderPlace(place, listKind){
+  if(!place) return;
+  var key = finderKey(place.suburb);
+  finderFold.suburb[key] = true;
+  finderFold.list[key + '--' + listKind] = true;
+  if(place.place_id) finderFold.place[place.place_id] = true;
 }
 
 function runFinder(){
@@ -1883,6 +1924,8 @@ function runFinder(){
     } else {
       // Slow path: geocode the suburb name using the Geocoding API
       finderLog('🔍 "' + customVal + '" not in local table — looking up coordinates via Geocoding API...', 'info');
+      finderScanUiReset();
+      finderStatus('Looking up that suburb…');
       var btn2 = document.getElementById('finderRunBtn');
       btn2.innerHTML = '<span class="spin">&#9696;</span> Looking up suburb...';
       btn2.disabled = true;
@@ -1902,12 +1945,14 @@ function runFinder(){
               type, maxStars, minScore, apiKey, btn2);
           } else {
             finderLog('❌ Geocoding failed for "' + customVal + '" (status: ' + data.status + '). Check spelling or try a nearby suburb.', 'warn');
+            finderStatus('Could not find that suburb. Check the spelling.', true);
             btn2.innerHTML = '&#128270; Run Live Scan';
             btn2.disabled = false;
           }
         })
         .catch(function(err){
           finderLog('❌ Geocoding request error: ' + err + '. Check your internet connection.', 'warn');
+          finderStatus('Could not look up that suburb. Check the connection.', true);
           btn2.innerHTML = '&#128270; Run Live Scan';
           btn2.disabled = false;
         });
@@ -1928,10 +1973,9 @@ function runFinder(){
 
   var btn = document.getElementById('finderRunBtn');
 
-  // Reset UI immediately (before possible async geocode step)
-  var log = document.getElementById('finderLog');
-  log.innerHTML = '';
-  document.getElementById('finderResults').innerHTML = '<div class="empty"><div class="ei" style="font-size:28px">&#128270;</div><p>Scanning Google Places...</p></div>';
+  // One status line. The detailed log stays hidden.
+  finderScanUiReset();
+  if(suburbsToScan && suburbsToScan.length) finderScanSuburb(suburbsToScan[0].name, 0, suburbsToScan.length);
   finderLog('Starting live Google Places scan...', 'info');
 
   // Sync path: suburbsToScan already resolved (table hit or zone mode)
@@ -1950,6 +1994,7 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
   btn.disabled = true;
 
   finderLog('Suburbs: ' + suburbsToScan.map(function(s){return s.name;}).join(', '), 'info');
+  if(suburbsToScan.length) finderScanSuburb(suburbsToScan[0].name, 0, suburbsToScan.length);
 
   var searchPlan = finderSearchPlan(type);
 
@@ -1964,6 +2009,7 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
     script.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_finderCallback';
     script.onerror = function(){
       finderLog('ERROR: Could not load Maps API. Check your key is valid and has no HTTP restrictions.', 'warn');
+      finderStatus('Could not load Google Maps. Check the API key.', true);
       btn.innerHTML = '&#128270; Run Live Scan';
       btn.disabled = false;
     };
@@ -2015,6 +2061,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
       skipped = candidates.length - FINDER_REVIEW_CAP;
       candidates = candidates.slice(0, FINDER_REVIEW_CAP);
     }
+    finderStatus(candidates.length ? 'Reading reviews…' : 'Finishing the scan…');
     finderLog('Nearby search done. ' + allResults.length + ' commercial places. ' + dupes + ' already in your leads (skipped). Reading review text for ' + candidates.length + ' lowest-rated places.' + (skipped ? ' ' + skipped + ' not checked this run — scan a smaller area to cover them.' : ''), 'info');
     finderLog('Google Places returns at most 5 reviews per business, chosen by relevance. This scan uses only those five. Check older reviews on one business to look further back. That check is paid and is not run for the whole suburb.', 'info');
     readFinderReviews(candidates);
@@ -2028,7 +2075,8 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     var box = document.getElementById('finderResults');
     function showProgress(){
       if(!box) return;
-      box.innerHTML = '<div class="empty"><div class="ei" style="font-size:28px">&#128270;</div><p>Reading review text… ' + checked + ' / ' + candidates.length + '. Kept ' + kept.length + ' with a cleanliness complaint.</p></div>';
+      finderStatus('Reading reviews… ' + checked + ' of ' + candidates.length);
+      box.innerHTML = '<div class="empty"><p>Reading reviews… ' + checked + ' of ' + candidates.length + '.</p></div>';
     }
     function finish(){
       var quoted = kept.slice();
@@ -2060,6 +2108,8 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
         commercial = commercial.slice(0, FINDER_COMMERCIAL_CAP);
       }
       finderCommercial = commercial;
+      finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
+      finderStatus('Finished. ' + kept.length + ' cleanliness complaint' + (kept.length===1?'':'s') + ', ' + commercial.length + ' place' + (commercial.length===1?'':'s') + ' to contact.');
       finderLog('Review check done. ' + checked + ' read. ' + kept.length + ' mention a cleanliness or hygiene problem. ' + noText + ' had no review text.', 'ok');
       if(belowScore) finderLog(belowScore + ' cleanliness matches were under the minimum score, so they are not listed.', 'info');
       finderLog(commercial.length + ' commercial places listed for outreach' + (commercialHidden ? ' (' + commercialHidden + ' more not shown — scan a smaller area).' : '') + '. No cleanliness email for these.', 'info');
@@ -2125,6 +2175,9 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
   }
 
   function searchOne(suburb, type, forCleanliness){
+    var suburbAt = 0;
+    for(var si=0; si<suburbsToScan.length; si++){ if(suburbsToScan[si].name === suburb.name){ suburbAt = si; break; } }
+    finderScanSuburb(suburb.name, suburbAt, suburbsToScan.length);
     var loc = new google.maps.LatLng(suburb.lat, suburb.lng);
     var request = {location: loc, radius: FINDER_SUBURB_RADIUS, type: type};
     var pages = 0;
@@ -2183,6 +2236,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
           return;
         }
       } else if(status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED){
+        finderStatus('Google refused the scan. Check that Places is turned on for this key.', true);
         finderLog('REQUEST_DENIED for ' + suburb.name + ' — Fix: (1) Go to console.cloud.google.com → APIs & Services → Enable "Places API" AND "Maps JavaScript API". (2) Ensure billing is active. (3) Under API Key restrictions set Application restrictions to None (for local file use).', 'warn');
       } else if(status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS && status !== google.maps.places.PlacesServiceStatus.OK){
         finderLog('Error for ' + suburb.name + ': ' + status, 'warn');
@@ -2304,6 +2358,7 @@ function checkOlderReviews(listName, idx, ev){
   if(!isGooglePlaceId(placeId)){
     place.olderReviewState = 'error';
     place.olderReviewNote = 'This business has no Google place id, so older reviews cannot be checked.';
+    revealFinderPlace(place, listName === 'commercial' ? 'commercial' : 'clean');
     renderFinderResults(finderPool, finderCommercial);
     return;
   }
@@ -2312,6 +2367,7 @@ function checkOlderReviews(listName, idx, ev){
   olderReviewBusy = true;
   place.olderReviewState = 'loading';
   place.olderReviewNote = 'Checking older reviews for this business…';
+  revealFinderPlace(place, listName === 'commercial' ? 'commercial' : 'clean');
   renderFinderResults(finderPool, finderCommercial);
   var body = JSON.stringify({placeId: placeId, limit: 100});
   fetch(OLDER_REVIEWS_URL, {
@@ -2348,6 +2404,7 @@ function checkOlderReviews(listName, idx, ev){
           : 'Older reviews include a cleanliness complaint. This is now a cleanliness lead. Import and draft email quotes that sentence.');
       finderLog('Older reviews kept ' + place.name + ' — "' + quote.slice(0, 90) + '"', 'ok');
       toast(place.name + ' is now a cleanliness lead', 's');
+      revealFinderPlace(place, 'clean');
     } else {
       place.olderReviewState = 'miss';
       place.olderReviewNote = place.issue
@@ -2360,6 +2417,7 @@ function checkOlderReviews(listName, idx, ev){
     if(gen !== finderResultGen) return;
     place.olderReviewState = 'error';
     place.olderReviewNote = 'Could not check older reviews. Try this business again.';
+    revealFinderPlace(place, listName === 'commercial' ? 'commercial' : 'clean');
     finderLog('Could not check older reviews for ' + place.name, 'warn');
     renderFinderResults(finderPool, finderCommercial);
   }).then(function(){
@@ -2380,135 +2438,171 @@ function commercialOutreachNote(r){
   if(!r || typeof r.stars !== 'number') return 'No Google rating. Still a commercial place to contact.';
   return 'Reviews were not read this run. Still a commercial place to contact.';
 }
+function finderCountLabel(n, one, many){
+  return n + ' ' + (n === 1 ? one : many);
+}
+function finderToggleSection(group, key){
+  var body = document.getElementById('fs-' + group + '-' + key);
+  var arr = document.getElementById('fs-' + group + '-' + key + '-arr');
+  if(!body || !finderFold[group]) return;
+  var closed = body.style.display === 'none';
+  body.style.display = closed ? 'block' : 'none';
+  if(arr) arr.style.transform = closed ? 'rotate(90deg)' : '';
+  finderFold[group][key] = closed;
+}
+function finderSection(group, key, title, countText, bodyHtml, accent){
+  var open = !!finderFold[group][key];
+  return '<div class="finder-sec" id="fsec-' + group + '-' + key + '"' + (accent ? ' style="border-left:4px solid ' + accent + '"' : '') + '>'
+    + '<div class="finder-sec-h" id="fsh-' + group + '-' + key + '" onclick="finderToggleSection(\'' + group + '\',\'' + key + '\')">'
+    + '<div style="min-width:0;flex:1">'
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">' + title + '</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:2px">' + countText + '</div>'
+    + '</div>'
+    + '<div id="fs-' + group + '-' + key + '-arr" style="font-size:14px;color:var(--t3);flex-shrink:0;transition:transform .2s' + (open ? ';transform:rotate(90deg)' : '') + '">&#9654;</div>'
+    + '</div>'
+    + '<div id="fs-' + group + '-' + key + '" style="display:' + (open ? 'block' : 'none') + ';padding:0 10px 10px">' + bodyHtml + '</div>'
+    + '</div>';
+}
+function cleanlinessCard(r, idx, existingNamesLocal){
+  var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
+  var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#E84040';
+  var starCls = r.stars<=2.5 ? 'stars-hot' : r.stars<=3.5 ? 'stars-warm' : 'stars-ok';
+  var scoreLabel = r.score>=80?'URGENT':r.score>=70?'HOT':r.score>=60?'WARM':'COLD';
+  var imported = finderImported[r.name] || existingNamesLocal.has((r.name||'').toLowerCase().trim());
+  var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
+  var open = !!(r.place_id && finderFold.place[r.place_id]);
+  return '<div class="fr-card" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+    + '<div id="frc-h-'+idx+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer" onclick="finderToggle('+idx+')">'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
+    + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.type)+'</div>'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+    + '<div style="text-align:right">'
+    + '<div style="font-size:18px;font-weight:900;line-height:1;color:'+scoreColor+'">'+r.score+'</div>'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:'+scoreColor+'">'+scoreLabel+'</div>'
+    + '</div>'
+    + '<div id="frc-arr-'+idx+'" style="font-size:14px;color:var(--t3);transition:transform .2s'+(open?';transform:rotate(90deg)':'')+'">&#9654;</div>'
+    + '</div>'
+    + '</div>'
+    + '<div id="frc-body-'+idx+'" style="display:'+(open?'block':'none')+'">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+    + '<span class="fr-tag '+starCls+'">'+starText+'</span>'
+    + '<span class="fr-tag">'+e(r.address)+'</span>'
+    + '</div>'
+    + (r.issue ? '<div class="fr-issue" style="margin-top:10px">&ldquo;'+e(r.issue)+'&rdquo;</div>' : '')
+    + olderReviewsControl('clean', idx, r)
+    + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+    + mkDetailBox('Address', e(r.address||'—'))
+    + mkDetailBox('BBM Score', '<span style="color:'+scoreColor+';font-weight:800">'+r.score+' / 100 — '+scoreLabel+'</span>')
+    + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
+    + mkDetailBox('Next Action', 'Copy the review email, send it, then mark it sent')
+    + '</div>'
+    + (imported
+      ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
+      : '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-cy btn-sm" id="frbtn-'+idx+'" onclick="importFinder('+idx+',true)" style="flex:1;justify-content:center">Import and draft email</button><button class="btn btn-gh btn-sm" onclick="importFinder('+idx+',false)">Import only</button></div>'
+    )
+    + '</div></div></div>';
+}
+function commercialCard(r, idx, existingNamesLocal){
+  var imported = finderImported[r.name] || existingNamesLocal.has((r.name||'').toLowerCase().trim());
+  var note = commercialOutreachNote(r);
+  var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
+  var open = !!(r.place_id && finderFold.place[r.place_id]);
+  return '<div class="fr-card" id="frx-'+idx+'" style="border-left:4px solid #8B93D6;margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+    + '<div id="frx-h-'+idx+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer" onclick="finderToggleCommercial('+idx+')">'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
+    + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.type)+'</div>'
+    + '</div>'
+    + '<div id="frx-arr-'+idx+'" style="font-size:14px;color:var(--t3);flex-shrink:0;transition:transform .2s'+(open?';transform:rotate(90deg)':'')+'">&#9654;</div>'
+    + '</div>'
+    + '<div id="frx-body-'+idx+'" style="display:'+(open?'block':'none')+'">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+    + '<span class="fr-tag" style="background:rgba(139,147,214,.2);color:#3A4580;border-color:#8B93D6">No complaint quote</span>'
+    + '<span class="fr-tag">'+starText+'</span>'
+    + '<span class="fr-tag">'+e(r.address)+'</span>'
+    + '</div>'
+    + '<div style="margin-top:10px;font-size:12px;color:var(--t2);line-height:1.45">'+e(note)+'</div>'
+    + olderReviewsControl('commercial', idx, r)
+    + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+    + mkDetailBox('Address', e(r.address||'—'))
+    + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
+    + mkDetailBox('List', 'Commercial outreach. Not a cleanliness lead.')
+    + mkDetailBox('Next Action', 'Find a contact and reach out. No premises complaint on file.')
+    + '</div>'
+    + (imported
+      ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
+      : '<button class="btn btn-gh btn-sm" id="frxbtn-'+idx+'" onclick="importCommercial('+idx+')" style="width:100%;justify-content:center">Import</button>'
+    )
+    + '</div></div></div>';
+}
 function renderFinderResults(results, commercial){
   results = results || [];
   commercial = commercial || [];
   var container = document.getElementById('finderResults');
-  var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
-  var legend = '<div style="font-size:12px;color:var(--t2);line-height:1.45;margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--s2);border:1px solid var(--bd)">Two lists, both limited to addresses in the suburb you picked. <strong>Cleanliness complaints</strong> are first. They quote a premises problem from the 5 reviews Google sent, and <strong>Import and draft email</strong> writes that email. <strong>Commercial places to contact</strong> are the purple list underneath, badged <strong>No complaint quote</strong>. That list is offices, retail, medical, shopping centres, and similar premises, not only the cleanliness type. Import there does not draft the cleanliness email. <strong>Check older reviews</strong> on a business looks further back than those 5, for that business only. It is not part of the suburb scan. Each check is paid.</div>';
-
-  var notYetImported = results.filter(function(r){ return !finderImported[r.name]; });
-  var urgentCount = results.filter(function(r){return r.score>=80;}).length;
-  var hotCount    = results.filter(function(r){return r.score>=70&&r.score<80;}).length;
-  var warmCount   = results.filter(function(r){return r.score>=60&&r.score<70;}).length;
-  var coldCount   = results.filter(function(r){return r.score<60;}).length;
-
-  var header = '<div style="margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(232,64,64,.08);border:1px solid rgba(232,64,64,.28)">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
-    + '<div>'
-    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Cleanliness complaints</div>'
-    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+results.length+' with a premises complaint. The scan read the 5 reviews Google sent. Check older reviews looks further back for one business.</div>'
-    + '</div>'
-    + (results.length && notYetImported.length>0
-      ? '<button class="btn btn-cy btn-sm" id="importAllBtn" onclick="importAllFinder()">&#11015; Import all '+notYetImported.length+'</button>'
-      : (results.length ? '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>' : ''))
-    + '</div>'
-    + (results.length ? '<div style="font-size:11px;margin-top:6px">'
-      + (urgentCount?'<span style="color:var(--lost);font-weight:800">● '+urgentCount+' Urgent&nbsp;&nbsp;</span>':'')
-      + (hotCount?'<span style="color:var(--warn);font-weight:800">● '+hotCount+' Hot&nbsp;&nbsp;</span>':'')
-      + (warmCount?'<span style="color:var(--cyd);font-weight:800">● '+warmCount+' Warm&nbsp;&nbsp;</span>':'')
-      + (coldCount?'<span style="color:var(--t3)">● '+coldCount+' Cold</span>':'')
-      + '</div>' : '')
-    + '</div>';
-
-  var cards = results.length ? results.map(function(r, idx){
-    var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
-    var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#E84040';
-    var starCls = r.stars<=2.5 ? 'stars-hot' : r.stars<=3.5 ? 'stars-warm' : 'stars-ok';
-    var scoreLabel = r.score>=80?'URGENT':r.score>=70?'HOT':r.score>=60?'WARM':'COLD';
-    var imported = finderImported[r.name] || existingNamesLocal.has(r.name.toLowerCase().trim());
-    var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
-
-    return '<div class="fr-card" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:10px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
-
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="finderToggle('+idx+')">'
-      + '<div style="flex:1;min-width:0">'
-      + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
-      + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.suburb)+' · '+e(r.type)+'</div>'
-      + '</div>'
-      + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-      + '<div style="text-align:right">'
-      + '<div style="font-size:22px;font-weight:900;line-height:1;color:'+scoreColor+'">'+r.score+'</div>'
-      + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:'+scoreColor+'">'+scoreLabel+'</div>'
-      + '</div>'
-      + '<div id="frc-arr-'+idx+'" style="font-size:14px;color:var(--t3);transition:transform .2s">▶</div>'
-      + '</div>'
-      + '</div>'
-
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
-      + '<span class="fr-tag '+starCls+'">'+starText+'</span>'
-      + '<span class="fr-tag">'+e(r.address)+'</span>'
-      + '</div>'
-      + (r.issue ? '<div class="fr-issue" style="margin-top:10px">&ldquo;'+e(r.issue)+'&rdquo;</div>' : '')
-      + olderReviewsControl('clean', idx, r)
-
-      + '<div id="frc-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
-      + mkDetailBox('Address', e(r.address||'—'))
-      + mkDetailBox('BBM Score', '<span style="color:'+scoreColor+';font-weight:800">'+r.score+' / 100 — '+scoreLabel+'</span>')
-      + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
-      + mkDetailBox('Next Action', 'Copy the review email, send it, then mark it sent')
-      + '</div>'
-      + (imported
-        ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
-        : '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-cy btn-sm" id="frbtn-'+idx+'" onclick="importFinder('+idx+',true)" style="flex:1;justify-content:center">Import and draft email</button><button class="btn btn-gh btn-sm" onclick="importFinder('+idx+',false)">Import only</button></div>'
-      )
-      + '</div>'
-
-      + '</div>';
-  }).join('') : '<div class="empty" style="padding:16px 8px"><div class="ei">&#128269;</div><p>No cleanliness complaints in this suburb from the 5 reviews Google sent. Use Check older reviews on a business below to look further back. That checks one business only.</p></div>';
-
-  var commercialNew = commercial.filter(function(r){ return !finderImported[r.name] && !existingNamesLocal.has((r.name||'').toLowerCase().trim()); });
-  var commercialHeader = '<div style="margin:18px 0 12px;padding:10px 12px;border-radius:10px;background:rgba(139,147,214,.16);border:1px solid #8B93D6">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
-    + '<div>'
-    + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Commercial places to contact</div>'
-    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+commercial.length+' offices, shops, medical, shopping centres, and similar premises with an address in this suburb. Not limited to the cleanliness type. Import does not draft the cleanliness email. Check older reviews looks further back for that one business.</div>'
-    + '</div>'
-    + (commercial.length && commercialNew.length>0
-      ? '<button class="btn btn-gh btn-sm" id="importAllCommercialBtn" onclick="importAllCommercial()">&#11015; Import all '+commercialNew.length+'</button>'
-      : (commercial.length ? '<div style="color:var(--won);font-weight:800;font-size:12px">&#10003; All imported</div>' : ''))
-    + '</div></div>';
-
-  var commercialCards = commercial.length ? commercial.map(function(r, idx){
-    var imported = finderImported[r.name] || existingNamesLocal.has((r.name||'').toLowerCase().trim());
-    var note = commercialOutreachNote(r);
-    var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
-    return '<div class="fr-card" id="frx-'+idx+'" style="border-left:4px solid #8B93D6;margin-bottom:10px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer" onclick="finderToggleCommercial('+idx+')">'
-      + '<div style="flex:1;min-width:0">'
-      + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
-      + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.suburb)+' · '+e(r.type)+'</div>'
-      + '</div>'
-      + '<div id="frx-arr-'+idx+'" style="font-size:14px;color:var(--t3);transition:transform .2s">▶</div>'
-      + '</div>'
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
-      + '<span class="fr-tag" style="background:rgba(139,147,214,.2);color:#3A4580;border-color:#8B93D6">No complaint quote</span>'
-      + '<span class="fr-tag">'+starText+'</span>'
-      + '<span class="fr-tag">'+e(r.address)+'</span>'
-      + '</div>'
-      + '<div style="margin-top:10px;font-size:12px;color:var(--t2);line-height:1.45">'+e(note)+'</div>'
-      + olderReviewsControl('commercial', idx, r)
-      + '<div id="frx-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
-      + mkDetailBox('Address', e(r.address||'—'))
-      + mkDetailBox('Google Rating', typeof r.stars === 'number' ? ('★ '+r.stars+' from '+(r.reviews||0).toLocaleString()+' reviews') : 'No Google rating')
-      + mkDetailBox('List', 'Commercial outreach. Not a cleanliness lead.')
-      + mkDetailBox('Next Action', 'Find a contact and reach out. No premises complaint on file.')
-      + '</div>'
-      + (imported
-        ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
-        : '<button class="btn btn-gh btn-sm" id="frxbtn-'+idx+'" onclick="importCommercial('+idx+')" style="width:100%;justify-content:center">Import</button>'
-      )
-      + '</div>'
-      + '</div>';
-  }).join('') : '<div class="empty" style="padding:12px 8px"><p>No extra commercial places in this scan.</p></div>';
-
+  if(!container) return;
+  var existingNamesLocal = new Set(leads.map(function(l){return (l.name||'').toLowerCase().trim();}));
   if(!results.length && !commercial.length){
-    container.innerHTML = legend + '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. Google sends at most 5 reviews per business. When a business is listed, Check older reviews looks further back for that one business.</p></div>';
+    container.innerHTML = '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. When a business is listed, open its suburb, then Check older reviews on that one business.</p></div>';
     return;
   }
-  container.innerHTML = legend + header + cards + commercialHeader + commercialCards;
+  var buckets = {};
+  var order = [];
+  function bucket(name){
+    var key = finderKey(name);
+    if(!buckets[key]){
+      buckets[key] = {key:key, name:name || 'Unknown', clean:[], commercial:[]};
+      order.push(key);
+    }
+    return buckets[key];
+  }
+  results.forEach(function(r, idx){ bucket(r.suburb).clean.push({r:r, idx:idx}); });
+  commercial.forEach(function(r, idx){ bucket(r.suburb).commercial.push({r:r, idx:idx}); });
+  var rank = {};
+  (finderSuburbOrder || []).forEach(function(name, i){ rank[finderKey(name)] = i; });
+  order.sort(function(a, b){
+    var ra = Object.prototype.hasOwnProperty.call(rank, a) ? rank[a] : 9999;
+    var rb = Object.prototype.hasOwnProperty.call(rank, b) ? rank[b] : 9999;
+    if(ra !== rb) return ra - rb;
+    return String(buckets[a].name).localeCompare(String(buckets[b].name));
+  });
+  var html = '<div style="font-size:12px;color:var(--t2);line-height:1.45;margin-bottom:10px">Open a suburb, then a list, then one business.</div>';
+  html += order.map(function(key){
+    var b = buckets[key];
+    var cleanNew = b.clean.filter(function(item){
+      var r = item.r;
+      return !finderImported[r.name] && !existingNamesLocal.has((r.name||'').toLowerCase().trim()) && placeHasPremisesComplaint(r);
+    }).length;
+    var cleanCards = b.clean.length
+      ? b.clean.map(function(item){ return cleanlinessCard(item.r, item.idx, existingNamesLocal); }).join('')
+      : '<div class="empty" style="padding:8px 4px"><p>No cleanliness complaints in this suburb from the 5 reviews Google sent. Open Commercial places and use Check older reviews on one business.</p></div>';
+    var cleanImport = b.clean.length
+      ? (cleanNew
+        ? '<button class="btn btn-cy btn-sm" style="margin:0 0 8px" onclick="importCleanInSuburb(\''+key+'\')">Import all '+cleanNew+' in this suburb</button>'
+        : '<div style="color:var(--won);font-weight:800;font-size:12px;margin-bottom:8px">&#10003; All imported</div>')
+      : '';
+    var commNew = b.commercial.filter(function(item){
+      var r = item.r;
+      return !finderImported[r.name] && !existingNamesLocal.has((r.name||'').toLowerCase().trim());
+    }).length;
+    var commCards = b.commercial.length
+      ? b.commercial.map(function(item){ return commercialCard(item.r, item.idx, existingNamesLocal); }).join('')
+      : '<div class="empty" style="padding:8px 4px"><p>No extra commercial places in this suburb.</p></div>';
+    var commImport = b.commercial.length
+      ? (commNew
+        ? '<button class="btn btn-gh btn-sm" style="margin:0 0 8px" onclick="importCommercialInSuburb(\''+key+'\')">Import all '+commNew+' in this suburb</button>'
+        : '<div style="color:var(--won);font-weight:800;font-size:12px;margin-bottom:8px">&#10003; All imported</div>')
+      : '';
+    var lists = finderSection('list', key + '--clean', 'Cleanliness complaints', finderCountLabel(b.clean.length, 'complaint', 'complaints'), cleanImport + cleanCards, '#E84040')
+      + finderSection('list', key + '--commercial', 'Commercial places', finderCountLabel(b.commercial.length, 'place to contact', 'places to contact'), commImport + commCards, '#8B93D6');
+    var subCount = finderCountLabel(b.clean.length, 'cleanliness complaint', 'cleanliness complaints')
+      + ' · ' + finderCountLabel(b.commercial.length, 'place to contact', 'places to contact');
+    return finderSection('suburb', key, e(b.name), subCount, lists);
+  }).join('');
+  container.innerHTML = html;
 }
 
 function mkDetailBox(label, val){
@@ -2522,17 +2616,21 @@ function finderToggle(idx){
   var body = document.getElementById('frc-body-'+idx);
   var arr  = document.getElementById('frc-arr-'+idx);
   if(!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if(arr) arr.style.transform = open ? '' : 'rotate(90deg)';
+  var closed = body.style.display === 'none';
+  body.style.display = closed ? 'block' : 'none';
+  if(arr) arr.style.transform = closed ? 'rotate(90deg)' : '';
+  var place = finderPool[idx];
+  if(place && place.place_id) finderFold.place[place.place_id] = closed;
 }
 function finderToggleCommercial(idx){
   var body = document.getElementById('frx-body-'+idx);
   var arr  = document.getElementById('frx-arr-'+idx);
   if(!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if(arr) arr.style.transform = open ? '' : 'rotate(90deg)';
+  var closed = body.style.display === 'none';
+  body.style.display = closed ? 'block' : 'none';
+  if(arr) arr.style.transform = closed ? 'rotate(90deg)' : '';
+  var place = finderCommercial[idx];
+  if(place && place.place_id) finderFold.place[place.place_id] = closed;
 }
 
 function mkLeadFromPool(r){
@@ -2629,6 +2727,52 @@ function importCommercial(idx){
   if(btn2) btn2.outerHTML = '<div style="color:var(--won);font-size:12px;font-weight:800;padding:6px 0">&#10003; Added as an outreach target. No cleanliness email.</div>';
   usb();
   toast(r.name + ' added as an outreach target', 's');
+}
+
+function importCommercialInSuburb(slug){
+  var pending = [];
+  finderCommercial.forEach(function(r, idx){
+    if(finderKey(r.suburb) !== slug) return;
+    if(finderImported[r.name] || placeHasPremisesComplaint(r)) return;
+    pending.push(r);
+  });
+  if(!pending.length){ toast('Nothing left to import in this suburb','w'); return; }
+  if(!confirm('Import ' + pending.length + ' commercial place' + (pending.length===1?'':'s') + ' in this suburb? They are outreach targets. No cleanliness email is drafted.')) return;
+  var imported = 0;
+  pending.forEach(function(r){
+    var newLead = mkLeadFromPool(r);
+    newLead.keyIssue = '';
+    newLead.reviewStars = '';
+    leads.push(newLead);
+    finderImported[r.name] = true;
+    imported++;
+  });
+  persist();
+  usb();
+  toast(imported + ' outreach targets imported', 's');
+  renderFinderResults(finderPool, finderCommercial);
+}
+function importCleanInSuburb(slug){
+  var pending = [];
+  finderPool.forEach(function(r){
+    if(finderKey(r.suburb) !== slug) return;
+    if(finderImported[r.name] || !placeHasPremisesComplaint(r)) return;
+    pending.push(r);
+  });
+  if(!pending.length){ toast('Nothing left to import in this suburb','w'); return; }
+  if(!confirm('Import ' + pending.length + ' cleanliness complaint' + (pending.length===1?'':'s') + ' in this suburb? Each one is added with its review quote.')) return;
+  var imported = 0;
+  pending.forEach(function(r){
+    var newLead = mkLeadFromPool(r);
+    if(!newLead.keyIssue) return;
+    leads.push(newLead);
+    finderImported[r.name] = true;
+    imported++;
+  });
+  persist();
+  usb();
+  toast(imported + ' cleanliness leads imported', 's');
+  renderFinderResults(finderPool, finderCommercial);
 }
 
 function importAllCommercial(){
