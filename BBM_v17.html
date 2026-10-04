@@ -488,34 +488,15 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
     <div><div class="sb-nm">Big Blue Mop</div><div class="sb-tg">CRM v17 &middot; Perth WA</div></div>
   </div>
   <div class="nav">
-    <div class="nl">Workspace</div>
-    <button class="ni on" id="ni-home" type="button" onclick="go('home')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#9889;</span><span>Command Centre</span><span class="ni-badge" id="urgB" style="display:none"></span></button>
+    <button class="ni on" id="ni-finder" type="button" onclick="go('finder')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128270;</span><span>Lead Finder</span></button>
     <button class="ni" id="ni-cal" type="button" onclick="go('cal')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128197;</span><span>Calendar</span></button>
-    <button class="ni" id="ni-kanban" type="button" onclick="go('kanban')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128203;</span><span>Lead Lifecycle</span></button>
-    <button class="ni" id="ni-leads" type="button" onclick="go('leads')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#127919;</span><span>All Leads</span></button>
     <button class="ni" id="ni-timeline" type="button" onclick="go('timeline')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#9202;</span><span>Lead Timeline</span></button>
-    <button class="ni" id="ni-finder" type="button" onclick="go('finder')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128270;</span><span>Lead Finder</span></button>
-    <button class="ni" id="ni-templates" type="button" onclick="go('templates')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#9993;</span><span>Email Templates</span></button>
-    <button class="ni" id="ni-invoicing" type="button" onclick="go('invoicing')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128176;</span><span>Invoicing</span></button>
-    <div class="nl">Intelligence</div>
-    <button class="ni" id="ni-intel" type="button" onclick="go('intel')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128269;</span><span>Perth Metro</span></button>
-    <button class="ni" id="ni-local" type="button" onclick="go('local')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128205;</span><span>Local Hitlist</span></button>
-    <button class="ni" id="ni-routes" type="button" onclick="go('routes')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128506;</span><span>Route Planner</span></button>
-    <div class="nl">Website</div>
-    <button class="ni" id="ni-checklist" type="button" onclick="go('checklist')" style="background:none;border:none;width:100%;text-align:left;font-family:var(--f);touch-action:manipulation"><span class="ni-ic">&#128203;</span><span>Checklist Responses</span><span class="ni-badge" id="clBadge" style="display:none"></span></button>
-  </div>
-  <div class="sb-bot">
-    <div class="sbt">Live Snapshot</div>
-    <div class="ss"><span class="ss-l">Active leads</span><span class="ss-v" style="color:var(--cy)" id="sb-a">-</span></div>
-    <div class="ss"><span class="ss-l">Revenue won</span><span class="ss-v" style="color:var(--won)" id="sb-r">-</span></div>
-    <div class="ss"><span class="ss-l">Replies pending</span><span class="ss-v" style="color:var(--lost)" id="sb-p">-</span></div>
-    <div class="ss"><span class="ss-l">Overdue</span><span class="ss-v" style="color:var(--warn)" id="sb-o">-</span></div>
   </div>
 </aside>
 <div class="main">
   <header class="topbar">
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</button>
-    <div class="tb-ttl" id="ttl">Command Centre</div>
+    <div class="tb-ttl" id="ttl">Lead Finder</div>
     <div class="srch" id="srch" role="search"><span style="color:var(--t3);font-size:12px">&#128269;</span><input type="text" placeholder="Search leads..." id="sq" oninput="debounceSearch()" aria-label="Search leads"></div>
     <button class="btn btn-gh btn-sm" id="expB" style="display:none" onclick="expCSV()">&#8595; CSV</button>
     <button class="btn btn-gh btn-sm" onclick="oImport()" title="Import leads from morning briefing JSON">&#128229; Import JSON</button>
@@ -523,7 +504,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
   </header>
   <div class="ca" role="main">
     <!-- HOME -->
-    <div class="view on" id="v-home">
+    <div class="view" id="v-home">
       <div class="krow" id="kpiRow"></div>
       <div class="hg">
         <div class="panel"><div class="ph"><div class="pt"><div class="pld"></div>Needs Action<span id="acB" style="font-family:var(--m);font-size:11px;color:var(--t3);margin-left:6px"></span></div></div><div class="pb" id="acList"></div></div>
@@ -616,21 +597,25 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
       <div class="ltl-list" id="ltlList"></div>
     </div>
     <!-- LEAD FINDER -->
-    <div class="view" id="v-finder">
+    <div class="view on" id="v-finder">
       <div class="finder-wrap">
         <div class="finder-cfg">
           <div class="finder-cfg-top">
             <div class="finder-cfg-t">&#128270; Lead Finder</div>
 
-            <div class="finder-field">
-              <div class="finder-label">&#128273; Google Places API Key</div>
-              <input class="finder-inp" id="f-apikey" type="password" placeholder="AIzaSy..." autocomplete="off">
-              <div style="display:flex;gap:6px;margin-top:5px">
-                <button class="btn btn-gh btn-sm" onclick="saveFinderKey()" style="flex:1;justify-content:center;font-size:11px">Save Key</button>
-                <button class="btn btn-gh btn-sm" onclick="testFinderKey()" style="flex:1;justify-content:center;font-size:11px;background:var(--s2)">Test Key</button>
-                <button class="btn btn-gh btn-sm" onclick="toggleKeyVis()" style="font-size:11px" id="keyVisBtn">Show</button>
+            <div class="finder-field" id="finderKeyBox">
+              <div class="finder-label">Google key</div>
+              <div id="finderKeySaved" style="display:none">
+                <div id="keyStatus" style="font-size:12px;font-weight:800;color:var(--won);line-height:1.4">Google key saved on this phone.</div>
+                <button type="button" class="btn btn-gh btn-sm" onclick="showFinderKeyEditor()" style="margin-top:6px">Change key</button>
               </div>
-              <div id="keyStatus" style="font-size:10px;color:var(--t3);margin-top:4px;line-height:1.4">Key stored in localStorage — never leaves your browser.</div>
+              <div id="finderKeyEditor">
+                <input class="finder-inp" id="f-apikey" type="password" placeholder="Paste your Google key" autocomplete="off" spellcheck="false">
+                <div style="display:flex;gap:6px;margin-top:6px">
+                  <button type="button" class="btn btn-cy btn-sm" onclick="saveFinderKey()" style="flex:1;justify-content:center">Save key</button>
+                  <button type="button" class="btn btn-gh btn-sm" id="finderKeyCancel" onclick="cancelFinderKeyEditor()" style="display:none">Cancel</button>
+                </div>
+              </div>
             </div>
 
             <div style="height:1px;background:var(--bd);margin:10px 0"></div>
@@ -649,49 +634,23 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <div class="finder-field">
-              <div class="finder-label">Cleanliness type</div>
-              <select class="finder-sel" id="f-type">
-                <option value="shopping_mall">Shopping Centre</option>
-                <option value="store">Retail shop</option>
-                <option value="doctor" selected>Medical Centre</option>
-                <option value="dentist">Dentist</option>
-                <option value="hospital">Hospital</option>
-                <option value="local_government_office">Government Office</option>
-                <option value="real_estate_agency">Strata / Real Estate</option>
-                <option value="office">Office / professional</option>
-                <option value="all">All commercial types</option>
-              </select>
-            </div>
-
-            <div class="finder-field">
-              <div class="finder-label">Max Google Stars</div>
-              <select class="finder-sel" id="f-maxstars">
-                <option value="2.5">2.5 &#9733; and below</option>
-                <option value="3.0">3.0 &#9733; and below</option>
-                <option value="3.5">3.5 &#9733; and below</option>
-                <option value="4.0">4.0 &#9733; and below</option>
-                <option value="5.0" selected>Any rating</option>
-              </select>
-            </div>
-
-            <div class="finder-field">
-              <div class="finder-label">Min BBM Score</div>
+              <div class="finder-label">Minimum cleanliness score</div>
               <select class="finder-sel" id="f-minscore">
                 <option value="0" selected>Any score</option>
-                <option value="60">60+ (Warm+)</option>
-                <option value="70">70+ (Hot+)</option>
-                <option value="80">80+ (Urgent only)</option>
+                <option value="60">60 and up</option>
+                <option value="70">70 and up</option>
+                <option value="80">80 and up</option>
               </select>
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Cleanliness uses the type you picked, and only places whose address is in the suburb. The purple list is every office, shop, medical centre, shopping centre, and similar premises in that suburb, even if that type was not selected. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business. To look further back, use Check older reviews on that one business. Each check is paid, so the scan does not do it for you.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Every scan looks for commercial premises in the suburb: offices, shops, medical, shopping centres, and similar places. Homes are left out. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business. Check older reviews looks further back for one business. Each check is paid, so the scan does not do it for you.</div>
           </div>
           <div id="finderStatus" class="finder-status"></div>
           <div class="finder-log" id="finderLog" hidden></div>
         </div>
         <div class="finder-results" id="finderResults">
-          <div class="empty"><div class="ei">&#128270;</div><p>Add your Google API key and hit Run Live Scan. Cleanliness complaints in the suburb are listed first. Other commercial premises in that suburb are listed underneath, for outreach.</p></div>
+          <div class="empty"><div class="ei">&#128270;</div><p>No scan yet. Pick a suburb and run a scan.</p></div>
         </div>
       </div>
     </div>
@@ -832,7 +791,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
     <div class="mh"><div class="mt" id="mttl">Add Lead</div><button class="dpc" onclick="cModal()">&#10005;</button></div>
     <div class="mbody">
       <div class="mfs"><div class="mfst">Business Info</div>
-        <div class="mr2"><div class="mg"><label class="ml">Business Name *</label><input class="mi" id="f-name" placeholder="e.g. Nollamara Shopping Centre"></div><div class="mg"><label class="ml">Suburb</label><input class="mi" id="f-suburb"></div></div>
+        <div class="mr2"><div class="mg"><label class="ml">Business Name *</label><input class="mi" id="f-name" placeholder="Business name"></div><div class="mg"><label class="ml">Suburb</label><input class="mi" id="f-suburb"></div></div>
         <div class="mr2"><div class="mg"><label class="ml">Type</label><select class="ms" id="f-lead-type"><option value="">Select...</option><option>Shopping Centre</option><option>Medical Centre</option><option>Government Office</option><option>Commercial Centre</option><option>Serviced Office</option><option>Business Park</option><option>Strata Management</option><option>Aged Care</option><option>Employment Services</option><option>Retail / Commercial</option><option>Corporate Office</option><option>Office</option><option>Industrial</option><option>Other</option></select></div><div class="mg"><label class="ml">BBM Score (0-100)</label><input class="mi" id="f-score" type="number" min="0" max="100"></div></div>
         <div class="mr2"><div class="mg"><label class="ml">Zone</label><input class="mi" id="f-zone"></div><div class="mg"><label class="ml">Address</label><input class="mi" id="f-address"></div></div>
       </div>
@@ -879,7 +838,6 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 <script>
 "use strict";
 
-var SEED=[{"id": 1, "name": "Stirling Business Association", "suburb": "Stirling", "type": "Office", "score": 95, "contact": "SBA Manager", "phone": "", "email": "", "stage": "Won", "e1": "2025-03-01", "quote": 1745, "nextAction": "Monthly invoice", "nextDate": "2026-03-01", "notes": "Existing contract. $1,745/month. Tuesday & Friday after hours.", "address": "18 Delawney St, Balcatta WA 6021", "stars": null, "reviews": null, "zone": "Zone 1 \u2014 Inner North", "priority": "WON", "keyIssue": "", "activity": [{"t": "Contract signed", "d": "Apr 2025"}, {"t": "First clean completed", "d": "Apr 2025"}, {"t": "Client happy with checklist system", "d": "May 2025"}]}, {"id": 2, "name": "Motivate Property Group", "suburb": "Balcatta", "type": "Property Management", "score": 90, "contact": "Property Manager", "phone": "", "email": "", "stage": "Won", "e1": "2025-01-01", "quote": 240, "nextAction": "Fortnightly invoice", "nextDate": "2026-03-08", "notes": "Existing contract. $120/clean, fortnightly. At Halley Road Balcatta.", "address": "Halley Rd Balcatta", "stars": null, "reviews": null, "zone": "Zone 1 — Inner North", "priority": "WON", "keyIssue": "", "activity": [{"t": "Contract started", "d": "Jan 2025"}]}, {"id": 3, "name": "NB VoIP", "suburb": "Balcatta", "type": "Office", "score": 90, "contact": "Office Manager", "phone": "", "email": "", "stage": "Won", "e1": "2025-01-01", "quote": 200, "nextAction": "Fortnightly invoice", "nextDate": "2026-03-08", "notes": "Existing contract. $100/clean, fortnightly. At Halley Road Balcatta.", "address": "Halley Rd Balcatta", "stars": null, "reviews": null, "zone": "Zone 1 — Inner North", "priority": "WON", "keyIssue": "", "activity": [{"t": "Contract started", "d": "Jan 2025"}]}, {"id": 201, "name": "Nollamara Shopping Centre", "suburb": "Nollamara", "type": "Shopping Centre", "score": 78, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Send Email 1 - Pain Hook", "nextDate": "", "notes": "Multiple reviews: \u2019grotty centre\u2019, dirty toilets, \u2019rif raff\u2019. 441 reviews \u2014 largest pool in local dataset. 2 min from home.", "address": "78-90 Hillsborough Dr Nollamara", "stars": 4.0, "reviews": 441, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "2 min", "keyIssue": "\u2019Grotty centre\u2019, dirty toilets mentioned", "activity": []}, {"id": 202, "name": "Nollamara Medical Centre", "suburb": "Nollamara", "type": "Medical Centre", "score": 72, "contact": "Practice Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call \u2014 practice manager. Medical compliance pitch.", "nextDate": "2026-02-24", "notes": "536 reviews \u2014 highest in entire local dataset. Extremely busy bulk billing clinic. Cramped front desk. Medical = highest legal hygiene obligation.", "address": "82 Hillsborough Dr Nollamara", "stars": 4.4, "reviews": 536, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "3 min", "keyIssue": "536 reviews, high patient volume, compliance risk", "activity": []}, {"id": 203, "name": "Global Resource Support", "suburb": "Nollamara", "type": "Corporate Office", "score": 45, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold walk-in while in the Nollamara loop \u2014 low effort", "nextDate": "2026-03-07", "notes": "4 reviews, 3.5 stars. \u2019Going backward\u2019, \u2019unprofessional\u2019. Small corporate office \u2014 low contract value but 3 min from home.", "address": "18 Nollamara Ave Nollamara", "stars": 3.5, "reviews": 4, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "MEDIUM", "driveTime": "3 min", "keyIssue": "Declining reviews, \u2019going backward\u2019", "activity": []}, {"id": 204, "name": "Flinders Square", "suburb": "Yokine", "type": "Shopping Centre", "score": 82, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Send Email 1 - Pain Hook", "nextDate": "", "notes": "\u2019Coles seems dingy and smells funny.\u2019 \u2019Dirty toilets \u2014 to be expected.\u2019 296 reviews. KEY TARGET \u2014 4 min from home.", "address": "30 Wiluna St Yokine", "stars": 3.9, "reviews": 296, "zone": "Ring 1 \u2014 Under 5 Min", "priority": "HIGH", "driveTime": "4 min", "keyIssue": "\u2019Coles smells funny\u2019, dirty toilets, dated", "activity": []}, {"id": 205, "name": "Services Australia Mirrabooka", "suburb": "Mirrabooka", "type": "Government Office", "score": 80, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government pitch \u2014 combine with Dept of Communities visit (same trip)", "nextDate": "2026-02-21", "notes": "2.7 stars / 58 reviews. Government procurement pathway. Batch with Dept of Communities \u2014 same Mirrabooka trip.", "address": "8 Sudbury Rd Mirrabooka", "stars": 2.7, "reviews": 58, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "HIGH", "driveTime": "7 min", "keyIssue": "2.7 stars, high-traffic govt office, management failures", "activity": []}, {"id": 206, "name": "Workskil Australia", "suburb": "Mirrabooka", "type": "Employment Services", "score": 76, "contact": "Building Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Find building owner for 22 Chesterfield Rd \u2014 one pitch, all tenants covered", "nextDate": "2026-02-21", "notes": "1.9 stars \u2014 lowest rated commercial office in this sweep. Shared building at 22 Chesterfield Rd. PITCH TO BUILDING MANAGER not Workskil.", "address": "Suite 5b/22 Chesterfield Rd Mirrabooka", "stars": 1.9, "reviews": 28, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "HIGH", "driveTime": "7 min", "keyIssue": "1.9 stars, building manager is the target", "activity": []}, {"id": 207, "name": "Dept of Communities Mirrabooka", "suburb": "Mirrabooka", "type": "Government Office", "score": 88, "contact": "Facilities Manager", "phone": "(08) 9222 2555", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 ask specifically for facilities/building manager. Government pitch.", "nextDate": "2026-02-21", "notes": "1.0 STARS \u2014 same department with raw sewage failures at Fremantle (scored 95 metro). URGENT. Government procurement pathway. Facilities manager is target, NOT counter staff.", "address": "5 Milldale Way Mirrabooka", "stars": 1.0, "reviews": 5, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "URGENT", "driveTime": "7 min", "keyIssue": "1.0 stars, same dept as Fremantle sewage failure", "activity": []}, {"id": 208, "name": "Chesterfield Commercial Centre", "suburb": "Mirrabooka", "type": "Commercial Centre", "score": 58, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Centre manager pitch. Multi-tenant = anchor contract.", "nextDate": "2026-03-07", "notes": "4.1 stars / 118 reviews. \u2019Some areas felt outdated, could use better maintenance.\u2019 DOT office inside. Same Mirrabooka trip.", "address": "1 Chesterfield Rd Mirrabooka", "stars": 4.1, "reviews": 118, "zone": "Ring 2 \u2014 Mirrabooka Cluster", "priority": "MEDIUM", "driveTime": "7 min", "keyIssue": "Maintenance signal, multi-tenant hub", "activity": []}, {"id": 209, "name": "Dianella Family Medical Centre", "suburb": "Dianella", "type": "Medical Centre", "score": 74, "contact": "Practice Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Practice manager \u2014 compliance and documentation pitch", "nextDate": "2026-03-03", "notes": "195 reviews, 3.8 stars. \u2019Doctor marked patient as seen without seeing them.\u2019 Operational chaos = cleaning deprioritised. Medical compliance pitch.", "address": "294 Grand Promenade Dianella", "stars": 3.8, "reviews": 195, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "10 min", "keyIssue": "Operational chaos, compliance risk", "activity": []}, {"id": 210, "name": "Morley Gateway", "suburb": "Morley", "type": "Commercial Centre", "score": 70, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Declining centre pitch \u2014 same clean for less, no lock-in, prove it first month", "nextDate": "2026-03-07", "notes": "3.8 stars / 12 reviews. \u201950% of stores closed. Old, unfunctional.\u2019 Declining centre = manager under cost pressure.", "address": "60 Russell St Morley", "stars": 3.8, "reviews": 12, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "11 min", "keyIssue": "50% closed, declining, management under pressure", "activity": []}, {"id": 211, "name": "City of Bayswater Civic Centre", "suburb": "Morley", "type": "Government / Council", "score": 60, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Register on Tenders WA \u2014 facilities manager approach. Combine with Morley Gateway.", "nextDate": "2026-02-25", "notes": "3.6 stars / 62 reviews. \u2019Disgusting council.\u2019 Government procurement \u2014 register as supplier. Combine with Morley Gateway visit.", "address": "61 Broun Ave Morley", "stars": 3.6, "reviews": 62, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "MEDIUM", "driveTime": "11 min", "keyIssue": "\u2019Disgusting council\u2019, public complaints", "activity": []}, {"id": 212, "name": "Maylands Commercial Centre", "suburb": "Maylands", "type": "Commercial Centre", "score": 68, "contact": "Centre Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Presentation + tenant attraction pitch \u2014 clean spaces lease faster", "nextDate": "2026-03-07", "notes": "3.6 stars / 24 reviews. \u2019Underutilised, many empty shopfronts.\u2019 Manager under pressure to attract tenants \u2014 clean common areas help.", "address": "168 Guildford Rd Maylands", "stars": 3.6, "reviews": 24, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "HIGH", "driveTime": "12 min", "keyIssue": "Empty shopfronts, centre under pressure", "activity": []}, {"id": 213, "name": "Brightwater Care Group HQ", "suburb": "Inglewood", "type": "Aged Care", "score": 55, "contact": "Operations Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Aged care compliance pitch \u2014 documented cleaning evidence for every site", "nextDate": "2026-03-07", "notes": "4.4 stars / 39 reviews. \u2019Gone downhill last 6 months \u2014 carers not turning up, overcharging.\u2019 Large aged care org managing multiple sites.", "address": "2A Walter Rd W Inglewood", "stars": 4.4, "reviews": 39, "zone": "Ring 3 \u2014 Afternoon Sweep", "priority": "MEDIUM", "driveTime": "10 min", "keyIssue": "Operational decline signal, multiple sites", "activity": []}, {"id": 101, "name": "Regus Osborne Park", "suburb": "Osborne Park", "type": "Serviced Office", "score": 85, "contact": "Building Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 pitch local manager not head office", "nextDate": "2026-02-25", "notes": "3.1 stars / 22 reviews. Multiple 1-star re financial disputes. Facility mgmt poor. YOUR HOME SUBURB \u2014 walk in.", "address": "355 Scarborough Beach Rd", "stars": 3.1, "reviews": 22, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Hidden fees, bond not returned, dishonest charges", "activity": []}, {"id": 102, "name": "Garden Office Park", "suburb": "Osborne Park", "type": "Business Park", "score": 55, "contact": "Property Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Pitch on grounds and common area maintenance gaps", "nextDate": "2026-03-07", "notes": "4.2 stars / 46 reviews. Parking costs, pool never used. Multi-tenanted building.", "address": "355 Scarborough Beach Rd", "stars": 4.2, "reviews": 46, "zone": "Zone 1 \u2014 Inner North", "priority": "MEDIUM", "keyIssue": "Parking costs, pool never used", "activity": []}, {"id": 103, "name": "Integrity Business Centre", "suburb": "Osborne Park", "type": "Serviced Office", "score": 30, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Monitor \u2014 low priority unless cleaner changes", "nextDate": "2026-04-01", "notes": "4.5 stars / 19 reviews. Generally well-reviewed. Low priority.", "address": "67 Howe St", "stars": 4.5, "reviews": 19, "zone": "Zone 1 \u2014 Inner North", "priority": "LOW", "keyIssue": "Slow response times", "activity": []}, {"id": 104, "name": "Osborne Park Business Hub", "suburb": "Osborne Park", "type": "Business Hub", "score": 72, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold approach \u2014 ask about current cleaning provider", "nextDate": "2026-02-28", "notes": "2.4 stars / 5 reviews. Service and access failures. Never open weekends.", "address": "8 Collingwood St", "stars": 2.4, "reviews": 5, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Never open weekends, poor service", "activity": []}, {"id": 105, "name": "Chambers Franklyn Strata", "suburb": "Stirling", "type": "Strata Management", "score": 80, "contact": "Property Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call \u2014 approach property manager directly. Each managed property = potential BBM contract", "nextDate": "2026-02-25", "notes": "3.6 stars / 89 reviews. Ceiling falling for over a year, maintenance ignored. Multiple managed properties = multiple contracts.", "address": "47 Cedric St Stirling", "stars": 3.6, "reviews": 89, "zone": "Zone 1 \u2014 Inner North", "priority": "HIGH", "keyIssue": "Ceiling falling for over a year, maintenance ignored", "activity": []}, {"id": 106, "name": "Officeworks Joondalup", "suburb": "Joondalup", "type": "Retail / Commercial", "score": 90, "contact": "Store Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Call store manager \u2014 sick day/hygiene data pitch. TOP TARGET.", "nextDate": "2026-02-24", "notes": "2.4 stars / 743 reviews. \u2019Absolute joke. Understaffed, slow.\u2019 One of highest review volumes in dataset. Systemic management failures.", "address": "15 Dwyer Turn Joondalup", "stars": 2.4, "reviews": 743, "zone": "Zone 2 \u2014 North", "priority": "HIGH", "keyIssue": "Understaffed, slow, wrong prices, poor management", "activity": []}, {"id": 107, "name": "Services Australia Joondalup", "suburb": "Joondalup", "type": "Government Office", "score": 50, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government procurement \u2014 register as supplier. High-traffic public space.", "nextDate": "2026-03-14", "notes": "3.5 stars / 130 reviews. Rude staff, long waits. Government procurement process applies.", "address": "11 Boas Ave Joondalup", "stars": 3.5, "reviews": 130, "zone": "Zone 2 \u2014 North", "priority": "MEDIUM", "keyIssue": "Rude staff, long waits", "activity": []}, {"id": 108, "name": "Department of Communities", "suburb": "Fremantle", "type": "Government Office", "score": 95, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "CALL FACILITIES MANAGER IMMEDIATELY \u2014 raw sewage complaints on record", "nextDate": "2026-02-22", "notes": "1.5 stars / 17 reviews. \u2019Forced to relive trauma in apartment flooded with RAW SEWERAGE.\u2019 HIGHEST PRIORITY IN ENTIRE DATASET. Government \u2014 procurement pathway available.", "address": "5 Newman Ct Fremantle", "stars": 1.5, "reviews": 17, "zone": "Zone 4 \u2014 South", "priority": "URGENT", "keyIssue": "Raw sewage flooding, neglect, no accountability", "activity": []}, {"id": 109, "name": "Leeuwin Estate Perth Office", "suburb": "Fremantle", "type": "Corporate / Hospitality", "score": 70, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Premium brand pitch \u2014 presentation and brand protection angle", "nextDate": "2026-03-07", "notes": "3.0 stars / 6 reviews. Turned away, dismissive service. Premium brand reputation at risk.", "address": "18 High St Fremantle", "stars": 3.0, "reviews": 6, "zone": "Zone 4 \u2014 South", "priority": "HIGH", "keyIssue": "Dismissive service, turned away customers", "activity": []}, {"id": 110, "name": "Department of Transport Midland", "suburb": "Midland", "type": "Government Office", "score": 86, "contact": "Facilities Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Government procurement \u2014 register as supplier. Largest review pool in dataset.", "nextDate": "2026-02-25", "notes": "3.2 stars / 475 reviews \u2014 LARGEST review pool in entire dataset. \u2019Furniture is very worn, far from comfortable \u2014 people napping while they wait.\u2019", "address": "5 Clayton St Midland", "stars": 3.2, "reviews": 475, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Understaffed, worn furniture, very long waits", "activity": []}, {"id": 111, "name": "Officeworks Midland", "suburb": "Midland", "type": "Retail / Commercial", "score": 88, "contact": "Store Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "If you land Joondalup Officeworks, use as reference for this location. Same chain.", "nextDate": "2026-02-28", "notes": "3.1 stars / 365 reviews. \u2019Incredibly unreliable, absolute regret.\u2019 Disorganised, orders lost. Same chain as Joondalup \u2014 one reference gets you both.", "address": "4 Clayton St Midland", "stars": 3.1, "reviews": 365, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Unreliable, disorganised, wrong products", "activity": []}, {"id": 112, "name": "City of Swan Administration", "suburb": "Midland", "type": "Government / Council", "score": 82, "contact": "Facilities Department", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Council procurement \u2014 documented waste and cleanliness failures publicly on record", "nextDate": "2026-02-28", "notes": "3.1 stars / 31 reviews. \u2019Crushed asbestos dumped on street \u2014 told it was cleaned \u2014 it was a lie.\u2019 Waste management failures documented publicly.", "address": "2 Midland Square", "stars": 3.1, "reviews": 31, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Asbestos not cleaned, bin complaints, no follow through", "activity": []}, {"id": 113, "name": "Midland Business Centre", "suburb": "Midland", "type": "Business Centre", "score": 75, "contact": "Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Walk in \u2014 someone literally wrote this place needs sprucing up. Direct pitch.", "nextDate": "2026-02-27", "notes": "4.0 stars / 4 reviews. \u2019It\u2019s ok. A bit of sprucing up would be nice.\u2019 DIRECT INVITATION.", "address": "24 Victoria St Midland", "stars": 4.0, "reviews": 4, "zone": "Zone 5 \u2014 East", "priority": "HIGH", "keyIssue": "Needs sprucing up \u2014 direct quote", "activity": []}, {"id": 114, "name": "C88 International Corporate", "suburb": "Perth CBD", "type": "Corporate Office", "score": 65, "contact": "Office Manager", "phone": "", "email": "", "stage": "To Contact", "e1": "", "quote": null, "nextAction": "Cold approach \u2014 professional misconduct and misleading info in reviews", "nextDate": "2026-03-07", "notes": "3.7 stars / 6 reviews. Professional misconduct, misleading info flagged in reviews.", "address": "224 Stirling St Perth", "stars": 3.7, "reviews": 6, "zone": "Zone 3 \u2014 CBD / West", "priority": "HIGH", "keyIssue": "Professional misconduct, misleading info", "activity": []}];
 
 /* PERF-03: Debounced search */
 var _searchTimer=null;
@@ -896,14 +854,26 @@ function deobfuscateKey(stored){if(!stored)return"";try{var decoded=atob(stored)
 var STAGES=["To Contact","Emailed","Opened","Replied","Visit Booked","Quoted","Won","Lost","On Hold"];
 var SC={"To Contact":"#3EC6F0","Emailed":"#8B93D6","Opened":"#F5A623","Replied":"#22B573","Visit Booked":"#1AA8D4","Quoted":"#0E7FAB","Won":"#22B573","Lost":"#E84040","On Hold":"#F5A623"};
 var SB={"To Contact":"rgba(62,198,240,.1)","Emailed":"rgba(139,147,214,.1)","Opened":"rgba(245,166,35,.1)","Replied":"rgba(34,181,115,.1)","Visit Booked":"rgba(26,168,212,.1)","Quoted":"rgba(14,127,171,.1)","Won":"rgba(34,181,115,.14)","Lost":"rgba(232,64,64,.11)","On Hold":"rgba(245,166,35,.09)"};
-var leads=JSON.parse(localStorage.getItem("bbm12")||"null");
-if(!leads){leads=SEED.map(function(x){return Object.assign({},x,{activity:(x.activity||[]).slice(),createdAt:x.createdAt||new Date().toISOString().slice(0,10)});});}
-var calEvents=JSON.parse(localStorage.getItem("bbm12-cal")||"[]");
-var contracts=JSON.parse(localStorage.getItem("bbm12-contracts")||"[]");
+function readStore(key){
+  try{
+    var raw=localStorage.getItem(key);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(ex){ return null; }
+}
+function writeStore(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); }catch(ex){}
+}
+var leads=readStore("bbm17");
+if(!Array.isArray(leads)) leads=[];
+var calEvents=readStore("bbm17-cal");
+if(!Array.isArray(calEvents)) calEvents=[];
+var contracts=readStore("bbm17-contracts");
+if(!Array.isArray(contracts)) contracts=[];
 var nid=(leads.length>0)?Math.max.apply(null,leads.map(function(l){return l.id;}))+1:1000;
 var eid=null,openId=null,aF="All",aTmpl=0,tmplLead=null;
 var calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
-function persist(){localStorage.setItem("bbm12",JSON.stringify(leads));}
+function persist(){writeStore("bbm17", leads);}
 function cpTxt(t){navigator.clipboard.writeText((t||"").trim()).then(function(){toast("Copied","i");}).catch(function(){toast("Copy failed","w");});}
 function mkCopyRow(label,displayHTML){
   return "<div style='margin-bottom:16px'>"+
@@ -921,8 +891,8 @@ function markEmailSent(id,num){
   l.activity.push({t:"Email "+num+" sent",d:new Date().toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})});
   persist();toast("Email "+num+" marked as sent","s");od2(id);rHome();rl();rKanban();
 }
-function persistCal(){localStorage.setItem("bbm12-cal",JSON.stringify(calEvents));}
-function persistContracts(){localStorage.setItem("bbm12-contracts",JSON.stringify(contracts));}
+function persistCal(){writeStore("bbm17-cal", calEvents);}
+function persistContracts(){writeStore("bbm17-contracts", contracts);}
 function fd(d){if(!d)return"Not set";return new Date(d+"T00:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short"});}
 function fdt(d){if(!d)return"";return new Date(d+"T00:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});}
 function over(d){if(!d)return false;var t=new Date();t.setHours(0,0,0,0);return new Date(d+"T00:00:00")<t;}
@@ -945,12 +915,12 @@ function usb(){
   var act=leads.filter(function(l){return l.stage!=="Won"&&l.stage!=="Lost";}).length;
   var rep=leads.filter(function(l){return l.stage==="Replied";}).length;
   var od=leads.filter(function(l){return over(l.nextDate)&&l.stage!=="Won"&&l.stage!=="Lost"&&l.nextDate;}).length;
-  document.getElementById("sb-a").textContent=act;
-  document.getElementById("sb-r").textContent="$"+rev.toLocaleString();
-  document.getElementById("sb-p").textContent=rep;
-  document.getElementById("sb-o").textContent=od;
+  var sbA=document.getElementById("sb-a"); if(sbA) sbA.textContent=act;
+  var sbR=document.getElementById("sb-r"); if(sbR) sbR.textContent="$"+rev.toLocaleString();
+  var sbP=document.getElementById("sb-p"); if(sbP) sbP.textContent=rep;
+  var sbO=document.getElementById("sb-o"); if(sbO) sbO.textContent=od;
   var urg=rep+od,b=document.getElementById("urgB");
-  b.textContent=urg;b.style.display=urg>0?"":"none";
+  if(b){ b.textContent=urg; b.style.display=urg>0?"":"none"; }
 }
 function go(v){
   cdp();
@@ -1086,7 +1056,7 @@ function rTimeline(){
   else if(sort==="stage")list.sort(function(a,b){return STAGES.indexOf(a.stage)-STAGES.indexOf(b.stage);});
   else if(sort==="overdue")list.sort(function(a,b){var oa=over(a.nextDate)?-1:1,ob=over(b.nextDate)?-1:1;return oa-ob;});
   document.getElementById("ltl-count").textContent=list.length+" leads";
-  if(!list.length){document.getElementById("ltlList").innerHTML='<div class="empty"><div class="ei">&#9202;</div><p>No leads match this filter</p></div>';return;}
+  if(!list.length){document.getElementById("ltlList").innerHTML='<div class="empty"><div class="ei">&#9202;</div><p>'+(leads.length?'No leads match this filter':'No leads yet.')+'</p></div>';return;}
   document.getElementById("ltlList").innerHTML=list.map(function(l){
     var info=getAgeSummary(l);
     var ageColor=info.urgency==="hot"?"var(--lost)":info.urgency==="warm"?"var(--warn)":"var(--cyd)";
@@ -1136,7 +1106,9 @@ function ltlTog(head){
 //  LEAD FINDER — LIVE GOOGLE PLACES API
 // ═══════════════════════════════════════════
 
-var FINDER_KEY_STORAGE = 'bbm12-gkey';
+var FINDER_KEY_STORAGE = 'bbm17-gkey';
+var FINDER_KEY_LEGACY = 'bbm12-gkey';
+var finderApiKey = '';
 var finderImported = {};
 var finderPool = [];
 var FINDER_REVIEW_CAP = 80;
@@ -1469,72 +1441,72 @@ var ZONE_FULL_METRO = ZONE_INNER_NORTH.concat(ZONE_NORTH_METRO).concat(ZONE_EAST
 // Legacy name kept for backward compatibility (preset mode = inner north)
 var FINDER_SUBURBS = ZONE_INNER_NORTH;
 
-// Load saved API key on page load
-document.addEventListener('DOMContentLoaded', function(){
-  var saved = localStorage.getItem(FINDER_KEY_STORAGE);
-  if(saved){
-    // v10: detect plain-text key (from v8 migration) vs obfuscated key (v9+)
-    var dk;
-    if(saved.startsWith('AIzaSy')){
-      // Plain-text key stored by v8 — use directly, then re-save obfuscated
-      dk = saved;
-      localStorage.setItem(FINDER_KEY_STORAGE, obfuscateKey(saved));
-    } else {
-      dk = deobfuscateKey(saved) || saved;
-    }
-    document.getElementById('f-apikey').value = dk;
-    document.getElementById('keyStatus').textContent = '✓ Key loaded from storage.';
-    document.getElementById('keyStatus').style.color = 'var(--won)';
-  }
-});
-
-function saveFinderKey(){
-  var k = document.getElementById('f-apikey').value.trim();
-  if(!k){toast('Paste your API key first','w'); return;}
-  localStorage.setItem(FINDER_KEY_STORAGE, obfuscateKey(k));
-  document.getElementById('keyStatus').textContent = '✓ Key saved to localStorage.';
-  document.getElementById('keyStatus').style.color = 'var(--won)';
-  toast('API key saved','s');
+function keyLooksSaved(k){
+  return typeof k === 'string' && k.length >= 30 && /^[A-Za-z0-9_\-]+$/.test(k);
 }
-
-function testFinderKey(){
-  var k = document.getElementById('f-apikey').value.trim();
-  if(!k){toast('Paste your API key first','w'); return;}
-  var status = document.getElementById('keyStatus');
-  status.textContent = 'Testing key...';
-  status.style.color = 'var(--warn)';
-  // Use Geocoding API as a lightweight test (requires Maps or Geocoding API)
-  var url = 'https://maps.googleapis.com/maps/api/geocode/json?address=Perth+WA&key=' + encodeURIComponent(k);
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status === 'OK'){
-        status.textContent = '✓ Key valid (Maps/Geocoding OK). Now check Places API is enabled in Cloud Console.';
-        status.style.color = 'var(--won)';
-        toast('Key valid for Maps/Geocoding','s');
-      } else if(d.status === 'REQUEST_DENIED'){
-        status.textContent = '✗ Key denied. Enable Maps JavaScript API + Places API in Google Cloud Console, and ensure billing is active.';
-        status.style.color = 'var(--lost)';
-        toast('Key denied — check Cloud Console','e');
-      } else {
-        status.textContent = 'Response: ' + d.status + ' — key may still work for Places.';
-        status.style.color = 'var(--warn)';
-      }
-    })
-    .catch(function(err){
-      status.textContent = 'Network error — check internet connection.';
-      status.style.color = 'var(--lost)';
-    });
+function readStoredFinderKey(raw){
+  if(!raw) return '';
+  if(keyLooksSaved(raw)) return raw;
+  var decoded = deobfuscateKey(raw);
+  if(keyLooksSaved(decoded)) return decoded;
+  return '';
 }
-function toggleKeyVis(){
-  var inp = document.getElementById('f-apikey');
-  var btn = document.getElementById('keyVisBtn');
-  if(inp.type === 'password'){
-    inp.type = 'text'; btn.textContent = 'Hide';
+function applyFinderKeyUi(){
+  var saved = document.getElementById('finderKeySaved');
+  var editor = document.getElementById('finderKeyEditor');
+  var cancel = document.getElementById('finderKeyCancel');
+  var input = document.getElementById('f-apikey');
+  if(!saved || !editor) return;
+  if(finderApiKey){
+    saved.style.display = '';
+    editor.style.display = 'none';
+    if(cancel) cancel.style.display = 'none';
+    if(input) input.value = '';
   } else {
-    inp.type = 'password'; btn.textContent = 'Show';
+    saved.style.display = 'none';
+    editor.style.display = '';
+    if(cancel) cancel.style.display = 'none';
   }
 }
+function loadFinderKey(){
+  var raw = '';
+  try{
+    raw = localStorage.getItem(FINDER_KEY_STORAGE) || localStorage.getItem(FINDER_KEY_LEGACY) || '';
+  }catch(ex){ raw = ''; }
+  finderApiKey = readStoredFinderKey(raw);
+  if(finderApiKey){
+    try{ localStorage.setItem(FINDER_KEY_STORAGE, obfuscateKey(finderApiKey)); }catch(ex){}
+  }
+  applyFinderKeyUi();
+}
+function saveFinderKey(){
+  var input = document.getElementById('f-apikey');
+  var k = input ? input.value.trim() : '';
+  if(!keyLooksSaved(k)){ toast('Paste your Google key first','w'); return; }
+  finderApiKey = k;
+  try{ localStorage.setItem(FINDER_KEY_STORAGE, obfuscateKey(k)); }
+  catch(ex){ toast('Could not save the key on this phone','w'); return; }
+  if(input) input.value = '';
+  applyFinderKeyUi();
+  toast('Google key saved on this phone','s');
+}
+function showFinderKeyEditor(){
+  var saved = document.getElementById('finderKeySaved');
+  var editor = document.getElementById('finderKeyEditor');
+  var cancel = document.getElementById('finderKeyCancel');
+  var input = document.getElementById('f-apikey');
+  if(saved) saved.style.display = 'none';
+  if(editor) editor.style.display = '';
+  if(cancel) cancel.style.display = finderApiKey ? '' : 'none';
+  if(input){ input.value = ''; input.focus(); }
+}
+function cancelFinderKeyEditor(){
+  var input = document.getElementById('f-apikey');
+  if(input) input.value = '';
+  applyFinderKeyUi();
+}
+window.addEventListener('pageshow', function(){ loadFinderKey(); });
+loadFinderKey();
 
 function toggleSuburbInput(){
   var mode = document.getElementById('f-suburbs-mode').value;
@@ -1543,7 +1515,7 @@ function toggleSuburbInput(){
   // Warn about full metro scan time
   var runBtn = document.getElementById('finderRunBtn');
   if(mode === 'metro_all'){
-    runBtn.title = 'Full Perth Metro scan: 65+ suburbs × selected type. May take 2–3 min.';
+    runBtn.title = 'Full Perth Metro scan. This can take a few minutes.';
   } else {
     runBtn.title = '';
   }
@@ -1891,13 +1863,20 @@ function revealFinderPlace(place, listKind){
 }
 
 function runFinder(){
-  var apiKey = document.getElementById('f-apikey').value.trim();
+  var editor = document.getElementById('finderKeyEditor');
+  var typed = document.getElementById('f-apikey');
+  var apiKey = (editor && editor.style.display !== 'none' && typed && typed.value.trim()) ? typed.value.trim() : finderApiKey;
   if(!apiKey){
-    toast('Add your Google API key first — paste it in the API Key field above','w');
+    toast('Paste your Google key and tap Save key','w');
     return;
   }
-  var type = document.getElementById('f-type').value;
-  var maxStars = parseFloat(document.getElementById('f-maxstars').value);
+  if(editor && editor.style.display !== 'none'){
+    finderApiKey = apiKey;
+    try{ localStorage.setItem(FINDER_KEY_STORAGE, obfuscateKey(apiKey)); }catch(ex){}
+    applyFinderKeyUi();
+  }
+  var type = 'all';
+  var maxStars = 5;
   var minScore = parseInt(document.getElementById('f-minscore').value, 10);
   if(isNaN(minScore)) minScore = 0;
 
@@ -2038,7 +2017,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
   var total = suburbsToScan.length * searchPlan.length;
   var done = 0;
 
-  finderLog('Scanning ' + suburbsToScan.length + ' suburb(s) × ' + searchPlan.length + ' commercial type(s) = ' + total + ' searches. Only addresses in each suburb are kept. Cleanliness reviews use the selected type.', 'info');
+  finderLog('Scanning ' + suburbsToScan.length + ' suburb(s) × ' + searchPlan.length + ' commercial type(s) = ' + total + ' searches. Only commercial premises with an address in each suburb are kept. Homes are left out.', 'info');
 
   function onAllDone(){
     var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
@@ -3579,7 +3558,7 @@ function toast(msg,type){
   document.getElementById("twrap").appendChild(el);
   setTimeout(function(){el.style.opacity="0";el.style.transform="translateX(10px)";el.style.transition="all .2s";setTimeout(function(){el.remove();},220);},2400);
 }
-usb();rHome();
+usb();
 document.getElementById("ev-date").value=new Date().toISOString().slice(0,10);
 document.getElementById("ct-start").value=new Date().toISOString().slice(0,10);
 
@@ -3661,7 +3640,7 @@ function rChecklist(){
       _clData=Array.isArray(data)?data:[];
       // Update badge on nav
       var badge=document.getElementById('clBadge');
-      if(_clData.length>0){badge.textContent=_clData.length;badge.style.display='';}else{badge.style.display='none';}
+      if(badge){ if(_clData.length>0){badge.textContent=_clData.length;badge.style.display='';}else{badge.style.display='none';} }
       _renderClTable();
     })
     .catch(function(){
