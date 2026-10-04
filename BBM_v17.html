@@ -1593,16 +1593,41 @@ function smellIsComplaint(sentence){
   if(/\b(smell|odou?r)s?\b[^.]{0,18}\b(fresh|clean|nice|great|lovely|good|amazing|beautiful)\b/i.test(sentence)) return false;
   return true;
 }
+function recommendationSentence(sentence){
+  return /\b((?:i|we|i'?d|we'?d)\s+(?:would\s+|highly\s+)?recommend|recommending|no\s+hesitation\s+in\s+recommending|highly\s+recommend|happy\s+to\s+recommend)\b/i.test(sentence);
+}
+function negativeHygienePhrase(sentence){
+  if(!/\b(hygiene|cleanliness)\b/i.test(sentence)) return false;
+  if(/\b(good|great|excellent|high|proper|strict|amazing|perfect|wonderful|fantastic|brilliant|outstanding|impeccable|lovely|nice|fine|best)\s+(?:(?:standard|standards|level|levels)\s+of\s+)?(hygiene|cleanliness)\b/i.test(sentence)) return false;
+  if(/\b(hygiene|cleanliness)\b[^.]{0,30}\b(good|great|excellent|amazing|perfect|wonderful|fantastic|brilliant|outstanding|impeccable|lovely|nice|fine|best)\b/i.test(sentence)) return false;
+  return /\b(poor|bad|terrible|awful|horrible|disgusting|lacking|slack|appalling|dreadful|shocking|worst|dirty|filthy|unclean|neglected|low)\s+(?:(?:standard|standards|level|levels)\s+of\s+)?(hygiene|cleanliness)\b/i.test(sentence)
+    || /\b(hygiene|cleanliness)\b[^.]{0,30}\b(poor|bad|terrible|awful|horrible|disgusting|lacking|slack|appalling|dreadful|shocking|worst|dirty|filthy|unclean|non-?existent|below\s+standard)\b/i.test(sentence)
+    || /\b(no|zero|lack\s+of|lacking|without)\s+(?:any\s+|basic\s+|proper\s+)?(hygiene|cleanliness)\b/i.test(sentence)
+    || /\b(hygiene|cleanliness)\s+(problem|issue|complaint|failure)s?\b/i.test(sentence);
+}
 function hygieneWordIsComplaint(sentence){
-  if(!/\b(hygien\w*|cleanliness)\b/i.test(sentence)) return false;
-  if(/\b(good|great|excellent|high|proper|strict|amazing|perfect)\s+(hygien\w*|cleanliness)\b/i.test(sentence)) return false;
-  return !!hygieneLiveMatch(sentence, /\b(hygien\w*|cleanliness)\b/i);
+  if(!sentence) return false;
+  if(/\bhygienists?\b/i.test(sentence) && !/\b(hygiene|cleanliness|unhygienic)\b/i.test(sentence)) return false;
+  if(/\bunhygienic\b/i.test(sentence) && hygieneLiveMatch(sentence, /\bunhygienic\b/i)) return true;
+  if(!negativeHygienePhrase(sentence)) return false;
+  if(recommendationSentence(sentence)) return false;
+  return true;
+}
+function explicitPremisesComplaint(sentence){
+  if(hygieneLiveMatch(sentence, HYGIENE_STRONG)) return true;
+  if(premisesMouldComplaint(sentence)) return true;
+  if(smellIsComplaint(sentence)) return true;
+  if(hygieneLiveMatch(sentence, HYGIENE_CLEANING_BAD)) return true;
+  if(hygieneLiveMatch(sentence, HYGIENE_FACILITY) && hygieneLiveMatch(sentence, HYGIENE_NEG)) return true;
+  if(negativeHygienePhrase(sentence)) return true;
+  return false;
 }
 function facilityPraise(sentence){
   return /\b(spotless|immaculate|sparkling|pristine|very clean|so clean|always clean|beautifully clean|perfectly clean)\b/i.test(sentence);
 }
 function sentenceComplaintScore(sentence, rating){
   if(!sentence) return 0;
+  if(recommendationSentence(sentence) && !explicitPremisesComplaint(sentence)) return 0;
   var score=0;
   if(hygieneLiveMatch(sentence, HYGIENE_STRONG)) score+=5;
   if(premisesMouldComplaint(sentence)) score+=5;
