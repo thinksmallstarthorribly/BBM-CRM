@@ -682,7 +682,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Cleanliness uses the type you picked, and only places whose address is in the suburb. The purple list is every office, shop, medical centre, shopping centre, and similar premises in that suburb, even if that type was not selected. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business, chosen by relevance, and no older history.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Cleanliness uses the type you picked, and only places whose address is in the suburb. The purple list is every office, shop, medical centre, shopping centre, and similar premises in that suburb, even if that type was not selected. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business. To look further back, use Check older reviews on that one business. Each check is paid, so the scan does not do it for you.</div>
           </div>
           <div class="finder-log" id="finderLog">
             <div style="color:var(--t3);font-size:11px">Activity log will appear here when you run a scan...</div>
@@ -1140,6 +1140,11 @@ var finderPool = [];
 var FINDER_REVIEW_CAP = 80;
 var FINDER_COMMERCIAL_CAP = 40;
 var finderCommercial = [];
+// One paid lookup per click. The suburb scan must never call this.
+var OLDER_REVIEWS_URL = 'https://bbm-reviews.bbm-crm.workers.dev/';
+var olderReviewBusy = false;
+var olderReviewTicket = 0;
+var finderResultGen = 0;
 
 // ── MASTER PERTH SUBURB COORDS (120+ suburbs) ─────────────────────────────
 var MASTER_SUBURB_COORDS = {
@@ -1671,6 +1676,7 @@ function findHygieneQuote(reviews){
     if(!best || localBest>best.rank){
       best={
         quote: quote,
+        sentence: localSentence,
         author: reviewAuthorName(rev),
         rating: rating,
         when: rev.relative_time_description||"",
@@ -1679,7 +1685,7 @@ function findHygieneQuote(reviews){
     }
   }
   if(!best) return null;
-  return {quote:best.quote, author:best.author, rating:best.rating, when:best.when};
+  return {quote:best.quote, sentence:best.sentence||"", author:best.author, rating:best.rating, when:best.when};
 }
 
 function finderScoreLead(rating, reviewCount, types){
@@ -1937,6 +1943,9 @@ function runFinder(){
 
 // ── launchFinder: called once suburbsToScan coords are known ─────────────────
 function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
+  finderResultGen++;
+  olderReviewTicket++;
+  olderReviewBusy = false;
   btn.innerHTML = '<span class="spin">&#9696;</span> Scanning...';
   btn.disabled = true;
 
@@ -2007,7 +2016,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
       candidates = candidates.slice(0, FINDER_REVIEW_CAP);
     }
     finderLog('Nearby search done. ' + allResults.length + ' commercial places. ' + dupes + ' already in your leads (skipped). Reading review text for ' + candidates.length + ' lowest-rated places.' + (skipped ? ' ' + skipped + ' not checked this run — scan a smaller area to cover them.' : ''), 'info');
-    finderLog('Google Places returns at most 5 reviews per business, chosen by relevance. It does not provide older reviews or the rest of the history. Cleanliness matches use only those five.', 'info');
+    finderLog('Google Places returns at most 5 reviews per business, chosen by relevance. This scan uses only those five. Check older reviews on one business to look further back. That check is paid and is not run for the whole suburb.', 'info');
     readFinderReviews(candidates);
   }
 
@@ -2196,6 +2205,167 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
   });
 }
 
+function isGooglePlaceId(id){
+  return typeof id === 'string' && id.indexOf('ChI') === 0;
+}
+function reviewsFromWorker(payload){
+  var list = payload && payload.reviews;
+  if(!list || !list.length) return [];
+  var out = [];
+  var n = Math.min(list.length, 100);
+  for(var i=0;i<n;i++){
+    var rev = list[i] || {};
+    var rating = rev.rating;
+    if(typeof rating !== 'number' && rating != null && String(rating).trim() !== '' && !isNaN(Number(rating))) rating = Number(rating);
+    var text = '';
+    if(typeof rev.text === 'string') text = rev.text;
+    else if(rev.text && typeof rev.text.text === 'string') text = rev.text.text;
+    out.push({
+      text: text,
+      rating: typeof rating === 'number' ? rating : null,
+      relative_time_description: rev.date != null && String(rev.date) !== '' ? String(rev.date) : ''
+    });
+  }
+  return out;
+}
+function olderReviewQuote(hit, rate){
+  if(!hit) return '';
+  if(hit.quote && sentenceComplaintScore(hit.quote, rate) > 0) return hit.quote;
+  if(hit.sentence && sentenceComplaintScore(hit.sentence, rate) > 0) return hit.sentence;
+  return '';
+}
+function movePlaceToCleanliness(place){
+  finderCommercial = finderCommercial.filter(function(r){
+    return !(r === place || (place.place_id && r.place_id === place.place_id));
+  });
+  var already = false;
+  for(var i=0;i<finderPool.length;i++){
+    if(finderPool[i] === place || (place.place_id && finderPool[i].place_id === place.place_id)){
+      finderPool[i] = place;
+      already = true;
+      break;
+    }
+  }
+  if(!already) finderPool.push(place);
+  finderPool.sort(function(a,b){ return (b.score||0) - (a.score||0); });
+}
+function applyOlderHitToExistingLead(place){
+  if(!finderImported[place.name]) return null;
+  var name = (place.name||'').toLowerCase().trim();
+  for(var i=0;i<leads.length;i++){
+    if((leads[i].name||'').toLowerCase().trim() !== name) continue;
+    var lead = leads[i];
+    lead.keyIssue = place.issue;
+    lead.reviewStars = typeof place.reviewStars === 'number' ? place.reviewStars : '';
+    lead.nextAction = 'Copy the review email, send it, then mark it sent';
+    lead.notes = (lead.notes||'') + '\nOlder reviews checked ' + new Date().toISOString().slice(0,10) + ': "' + place.issue + '"' + (place.reviewWhen ? ', ' + place.reviewWhen : '');
+    persist();
+    usb();
+    return lead;
+  }
+  return null;
+}
+function olderReviewsControl(listName, idx, place){
+  var state = place.olderReviewState || '';
+  var note = place.olderReviewNote || '';
+  var html = '';
+  if(note){
+    var color = state === 'error' ? 'var(--lost)' : state === 'hit' ? 'var(--cyd)' : 'var(--t2)';
+    html += '<div class="older-review-note" style="margin-top:8px;font-size:12px;line-height:1.45;color:'+color+'">'+e(note)+'</div>';
+  }
+  if(state === 'hit' && place.olderReviewLeadId){
+    html += '<button type="button" class="btn btn-cy btn-sm" style="margin-top:8px" onclick="openTmplForLead('+Number(place.olderReviewLeadId)+')">Open draft email</button>';
+  }
+  if(state === 'hit' || state === 'miss') return html;
+  var busy = state === 'loading';
+  html += '<button type="button" class="btn btn-gh btn-sm older-reviews-btn" id="olderbtn-'+listName+'-'+idx+'"'
+    + ' data-place-id="'+e(place.place_id||'')+'"'
+    + (busy ? ' disabled' : '')
+    + ' title="Looks further back than the 5 reviews Google sent. This business only."'
+    + ' onclick="checkOlderReviews(\''+listName+'\','+idx+',event)"'
+    + ' style="margin-top:8px'+(busy?';opacity:.7;cursor:wait':'')+'">'
+    + (busy ? 'Checking older reviews…' : 'Check older reviews')
+    + '</button>';
+  return html;
+}
+function checkOlderReviews(listName, idx, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  if(ev && ev.preventDefault) ev.preventDefault();
+  var list = listName === 'commercial' ? finderCommercial : listName === 'clean' ? finderPool : null;
+  if(!list) return;
+  var place = list[idx];
+  if(!place) return;
+  if(place.olderReviewState === 'loading' || place.olderReviewState === 'hit' || place.olderReviewState === 'miss') return;
+  if(olderReviewBusy){
+    toast('Finish the older-review check that is already running. Each one is paid.','w');
+    return;
+  }
+  var placeId = place.place_id;
+  if(!isGooglePlaceId(placeId)){
+    place.olderReviewState = 'error';
+    place.olderReviewNote = 'This business has no Google place id, so older reviews cannot be checked.';
+    renderFinderResults(finderPool, finderCommercial);
+    return;
+  }
+  var gen = finderResultGen;
+  var ticket = ++olderReviewTicket;
+  olderReviewBusy = true;
+  place.olderReviewState = 'loading';
+  place.olderReviewNote = 'Checking older reviews for this business…';
+  renderFinderResults(finderPool, finderCommercial);
+  var body = JSON.stringify({placeId: placeId, limit: 100});
+  fetch(OLDER_REVIEWS_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: body
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function(data){
+    if(gen !== finderResultGen) return;
+    if(!data || typeof data !== 'object') throw new Error('bad');
+    if(data.placeId && data.placeId !== placeId) throw new Error('place');
+    if(!Array.isArray(data.reviews)) throw new Error('reviews');
+    var hit = findHygieneQuote(reviewsFromWorker(data));
+    var reviewStars = hit && typeof hit.rating === 'number' ? hit.rating : null;
+    var rate = typeof reviewStars === 'number' ? reviewStars : (typeof place.stars === 'number' ? place.stars : null);
+    var quote = olderReviewQuote(hit, rate);
+    if(quote){
+      var wasComplaint = placeHasPremisesComplaint(place);
+      place.issue = quote;
+      place.reviewAuthor = (hit && hit.author) || '';
+      place.reviewStars = reviewStars;
+      place.reviewWhen = (hit && hit.when) || '';
+      place.reviewsRead = true;
+      place.olderReviewState = 'hit';
+      movePlaceToCleanliness(place);
+      var existing = applyOlderHitToExistingLead(place);
+      if(existing) place.olderReviewLeadId = existing.id;
+      place.olderReviewNote = existing
+        ? 'Older reviews include a cleanliness complaint. The draft email quotes that sentence.'
+        : (wasComplaint
+          ? 'Older reviews include a cleanliness complaint. The quote above is the one the draft email uses.'
+          : 'Older reviews include a cleanliness complaint. This is now a cleanliness lead. Import and draft email quotes that sentence.');
+      finderLog('Older reviews kept ' + place.name + ' — "' + quote.slice(0, 90) + '"', 'ok');
+      toast(place.name + ' is now a cleanliness lead', 's');
+    } else {
+      place.olderReviewState = 'miss';
+      place.olderReviewNote = place.issue
+        ? 'No extra cleanliness complaint in the older reviews. The quote above is still the one for the email.'
+        : 'No cleanliness complaint in the older reviews.';
+      finderLog('Older reviews for ' + place.name + ': no cleanliness complaint.', 'info');
+    }
+    renderFinderResults(finderPool, finderCommercial);
+  }).catch(function(){
+    if(gen !== finderResultGen) return;
+    place.olderReviewState = 'error';
+    place.olderReviewNote = 'Could not check older reviews. Try this business again.';
+    finderLog('Could not check older reviews for ' + place.name, 'warn');
+    renderFinderResults(finderPool, finderCommercial);
+  }).then(function(){
+    if(ticket === olderReviewTicket) olderReviewBusy = false;
+  });
+}
 function complaintRating(r){
   if(r && typeof r.reviewStars === 'number') return r.reviewStars;
   if(r && typeof r.stars === 'number') return r.stars;
@@ -2205,6 +2375,7 @@ function placeHasPremisesComplaint(r){
   return !!(r && r.issue && sentenceComplaintScore(r.issue, complaintRating(r)) > 0);
 }
 function commercialOutreachNote(r){
+  if(r && r.olderReviewState === 'miss') return 'Still a commercial place to contact.';
   if(r && r.reviewsRead) return 'No premises complaint in the 5 reviews Google sent.';
   if(!r || typeof r.stars !== 'number') return 'No Google rating. Still a commercial place to contact.';
   return 'Reviews were not read this run. Still a commercial place to contact.';
@@ -2214,7 +2385,7 @@ function renderFinderResults(results, commercial){
   commercial = commercial || [];
   var container = document.getElementById('finderResults');
   var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
-  var legend = '<div style="font-size:12px;color:var(--t2);line-height:1.45;margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--s2);border:1px solid var(--bd)">Two lists, both limited to addresses in the suburb you picked. <strong>Cleanliness complaints</strong> are first. They quote a premises problem from the 5 reviews Google sent, and <strong>Import and draft email</strong> writes that email. <strong>Commercial places to contact</strong> are the purple list underneath, badged <strong>No complaint quote</strong>. That list is offices, retail, medical, shopping centres, and similar premises, not only the cleanliness type. Import there does not draft the cleanliness email.</div>';
+  var legend = '<div style="font-size:12px;color:var(--t2);line-height:1.45;margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--s2);border:1px solid var(--bd)">Two lists, both limited to addresses in the suburb you picked. <strong>Cleanliness complaints</strong> are first. They quote a premises problem from the 5 reviews Google sent, and <strong>Import and draft email</strong> writes that email. <strong>Commercial places to contact</strong> are the purple list underneath, badged <strong>No complaint quote</strong>. That list is offices, retail, medical, shopping centres, and similar premises, not only the cleanliness type. Import there does not draft the cleanliness email. <strong>Check older reviews</strong> on a business looks further back than those 5, for that business only. It is not part of the suburb scan. Each check is paid.</div>';
 
   var notYetImported = results.filter(function(r){ return !finderImported[r.name]; });
   var urgentCount = results.filter(function(r){return r.score>=80;}).length;
@@ -2226,7 +2397,7 @@ function renderFinderResults(results, commercial){
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
     + '<div>'
     + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Cleanliness complaints</div>'
-    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+results.length+' with a premises complaint in the 5 reviews Google sent.</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+results.length+' with a premises complaint. The scan read the 5 reviews Google sent. Check older reviews looks further back for one business.</div>'
     + '</div>'
     + (results.length && notYetImported.length>0
       ? '<button class="btn btn-cy btn-sm" id="importAllBtn" onclick="importAllFinder()">&#11015; Import all '+notYetImported.length+'</button>'
@@ -2269,6 +2440,7 @@ function renderFinderResults(results, commercial){
       + '<span class="fr-tag">'+e(r.address)+'</span>'
       + '</div>'
       + (r.issue ? '<div class="fr-issue" style="margin-top:10px">&ldquo;'+e(r.issue)+'&rdquo;</div>' : '')
+      + olderReviewsControl('clean', idx, r)
 
       + '<div id="frc-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
@@ -2284,14 +2456,14 @@ function renderFinderResults(results, commercial){
       + '</div>'
 
       + '</div>';
-  }).join('') : '<div class="empty" style="padding:16px 8px"><div class="ei">&#128269;</div><p>No cleanliness complaints in this suburb from the 5 reviews Google sent. Google does not send older reviews. Commercial premises in the suburb are listed below.</p></div>';
+  }).join('') : '<div class="empty" style="padding:16px 8px"><div class="ei">&#128269;</div><p>No cleanliness complaints in this suburb from the 5 reviews Google sent. Use Check older reviews on a business below to look further back. That checks one business only.</p></div>';
 
   var commercialNew = commercial.filter(function(r){ return !finderImported[r.name] && !existingNamesLocal.has((r.name||'').toLowerCase().trim()); });
   var commercialHeader = '<div style="margin:18px 0 12px;padding:10px 12px;border-radius:10px;background:rgba(139,147,214,.16);border:1px solid #8B93D6">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
     + '<div>'
     + '<div style="font-size:14px;font-weight:900;color:var(--tx)">Commercial places to contact</div>'
-    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+commercial.length+' offices, shops, medical, shopping centres, and similar premises with an address in this suburb. Not limited to the cleanliness type. Import does not draft the cleanliness email.</div>'
+    + '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+commercial.length+' offices, shops, medical, shopping centres, and similar premises with an address in this suburb. Not limited to the cleanliness type. Import does not draft the cleanliness email. Check older reviews looks further back for that one business.</div>'
     + '</div>'
     + (commercial.length && commercialNew.length>0
       ? '<button class="btn btn-gh btn-sm" id="importAllCommercialBtn" onclick="importAllCommercial()">&#11015; Import all '+commercialNew.length+'</button>'
@@ -2316,6 +2488,7 @@ function renderFinderResults(results, commercial){
       + '<span class="fr-tag">'+e(r.address)+'</span>'
       + '</div>'
       + '<div style="margin-top:10px;font-size:12px;color:var(--t2);line-height:1.45">'+e(note)+'</div>'
+      + olderReviewsControl('commercial', idx, r)
       + '<div id="frx-body-'+idx+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
       + mkDetailBox('Address', e(r.address||'—'))
@@ -2332,7 +2505,7 @@ function renderFinderResults(results, commercial){
   }).join('') : '<div class="empty" style="padding:12px 8px"><p>No extra commercial places in this scan.</p></div>';
 
   if(!results.length && !commercial.length){
-    container.innerHTML = legend + '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. Google sends at most 5 reviews per business, chosen by relevance, and does not send older reviews.</p></div>';
+    container.innerHTML = legend + '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. Google sends at most 5 reviews per business. When a business is listed, Check older reviews looks further back for that one business.</p></div>';
     return;
   }
   container.innerHTML = legend + header + cards + commercialHeader + commercialCards;
