@@ -642,7 +642,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">One suburb searches only that suburb. The distance choices search suburbs around the Perth CBD, not one big circle. Offices, shops, medical, shopping centres, and similar places. Homes are left out. Places show up as each suburb finishes. Check older reviews is one business at a time.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">One suburb searches only that suburb. The distance choices search suburbs around the Perth CBD, not one big circle. Offices, shops, medical, shopping centres, and similar places. Homes are left out. Places show up as they are found. Check older reviews is one business at a time.</div>
           </div>
           <div id="finderStatus" class="finder-status"></div>
           <div class="finder-log" id="finderLog" hidden></div>
@@ -1123,6 +1123,8 @@ var finderStatusLocked = false;
 var finderScanSuburbName = '';
 var finderPublishedSuburbs = [];
 var finderRingNote = '';
+var finderRingLabel = '';
+var FINDER_SEARCH_WAIT_MS = 8000;
 var finderDraftOpen = {};
 var PERTH_CBD = {lat:-31.9523, lng:115.8613};
 var FINDER_RING_CAP = 12;
@@ -1920,6 +1922,7 @@ function finderScanUiReset(){
   finderFold = {suburb:{}, list:{}, place:{}};
   finderPublishedSuburbs = [];
   finderRingNote = '';
+  finderRingLabel = '';
   finderDraftOpen = {};
   var log = document.getElementById('finderLog');
   if(log) log.innerHTML = '';
@@ -1929,9 +1932,14 @@ function finderScanUiReset(){
 function finderScanSuburb(name, index, total){
   if(!name || name === finderScanSuburbName) return;
   finderScanSuburbName = name;
-  var msg = 'Scanning ' + name + '…';
-  if(total > 1) msg += ' (' + (index + 1) + ' of ' + total + ')';
-  finderStatus(msg);
+}
+function finderScanStatus(placeCount, extra){
+  var n = placeCount || 0;
+  var msg = finderRingLabel
+    ? (finderRingLabel + ': ' + n + ' place' + (n === 1 ? '' : 's'))
+    : ((finderScanSuburbName || 'Suburb') + ': ' + n + ' place' + (n === 1 ? '' : 's'));
+  if(extra) msg += '. ' + extra;
+  return msg;
 }
 function finderKey(name){
   return String(name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'suburb';
@@ -1964,7 +1972,7 @@ function runFinder(){
 
   var mode = finderWhereMode();
   var suburbsToScan = null;
-  var ringNote = '';
+  var ringLabel = '';
   if(mode === 'one'){
     var customVal = document.getElementById('f-suburb-custom').value.trim();
     if(!customVal){toast('Type a suburb name','w'); return;}
@@ -1985,7 +1993,9 @@ function runFinder(){
         .then(function(data){
           if(data.status === 'OK' && data.results && data.results.length > 0){
             var loc = data.results[0].geometry.location;
-            finderStatus(customVal + ': searching');
+            finderScanSuburbName = customVal;
+            finderRingLabel = '';
+            finderStatus(finderScanStatus(0));
             launchFinder([{name: customVal, lat: loc.lat, lng: loc.lng}],
               type, maxStars, minScore, apiKey, btn2);
           } else {
@@ -2006,17 +2016,16 @@ function runFinder(){
     var ring = suburbsInRing(band[0], band[1]);
     suburbsToScan = ring.suburbs;
     if(!suburbsToScan.length){ toast('No suburbs in that distance','w'); return; }
-    if(ring.capped) ringNote = 'Showing 12 suburbs in this ring';
+    ringLabel = mode === 'km5' ? 'Within 5 km' : mode === 'km10' ? '5 to 10 km' : '10 to 15 km';
   }
 
   var btn = document.getElementById('finderRunBtn');
+  var typedSuburb = (!ringLabel && suburbsToScan[0]) ? suburbsToScan[0].name : '';
   finderScanUiReset();
-  finderRingNote = ringNote;
+  finderRingLabel = ringLabel;
+  if(typedSuburb) finderScanSuburbName = typedSuburb;
   finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
-  var startMsg = suburbsToScan[0].name + ': searching';
-  if(suburbsToScan.length > 1) startMsg += ' · 1 of ' + suburbsToScan.length + ' suburbs';
-  if(finderRingNote) startMsg = finderRingNote + '. ' + startMsg;
-  finderStatus(startMsg);
+  finderStatus(finderScanStatus(0));
   launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn);
 }
 
@@ -2069,19 +2078,6 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
   var map = new google.maps.Map(mapDiv, {center:{lat:PERTH_CBD.lat, lng:PERTH_CBD.lng}, zoom:12});
   var service = new google.maps.places.PlacesService(map);
 
-  function suburbPlaceCount(name){
-    var n = 0;
-    for(var i = 0; i < allResults.length; i++){
-      if(allResults[i].suburb === name && allResults[i].inSuburb !== false) n++;
-    }
-    return n;
-  }
-  function progressLine(suburbName, count, doneSubs){
-    var msg = suburbName + ': ' + count + ' place' + (count === 1 ? '' : 's');
-    if(suburbsToScan.length > 1 && doneSubs) msg += ' · ' + doneSubs + ' of ' + suburbsToScan.length + ' suburbs';
-    if(finderRingNote) msg = finderRingNote + '. ' + msg;
-    return msg;
-  }
   function syncLists(){
     var quotedIds = {};
     finderPool.forEach(function(r){ if(r.place_id) quotedIds[r.place_id] = true; });
@@ -2105,11 +2101,11 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     finderCommercial = commercial;
     finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
   }
-  function paint(msg){
+  function paint(extra){
     if(gen !== finderResultGen) return;
     syncLists();
-    if(msg) finderStatus(msg);
-    renderFinderResults(finderPool, finderCommercial);
+    finderStatus(finderScanStatus(finderPool.length + finderCommercial.length, extra || ''));
+    if(finderPool.length || finderCommercial.length) renderFinderResults(finderPool, finderCommercial);
   }
   function publishSuburb(name){
     if(finderPublishedSuburbs.indexOf(name) === -1) finderPublishedSuburbs.push(name);
@@ -2128,8 +2124,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     });
     finderPool.sort(function(a, b){ return (b.score || 0) - (a.score || 0); });
     syncLists();
-    var msg = 'Finished. ' + finderPool.length + ' cleanliness complaint' + (finderPool.length === 1 ? '' : 's') + ', ' + finderCommercial.length + ' place' + (finderCommercial.length === 1 ? '' : 's') + ' to contact.';
-    if(finderRingNote) msg = finderRingNote + '. ' + msg;
+    var msg = 'Finished. ' + finderScanStatus(finderPool.length + finderCommercial.length);
     finderStatus(msg);
     btn.innerHTML = '&#128270; Run Live Scan';
     btn.disabled = false;
@@ -2155,9 +2150,7 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     var index = 0;
     var checked = 0;
     function reviewMsg(){
-      var msg = 'Reading reviews · ' + checked + ' of ' + candidates.length;
-      if(finderRingNote) msg = finderRingNote + '. ' + msg;
-      return msg;
+      return finderScanStatus(finderPool.length + finderCommercial.length);
     }
     finderStatus(reviewMsg());
     function nextDetail(){
@@ -2207,8 +2200,8 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
               }
             }
           }
-          finderStatus(reviewMsg());
-          if(hitAdded) paint(reviewMsg());
+          if(hitAdded) paint();
+          else finderStatus(finderScanStatus(finderPool.length + finderCommercial.length));
           setTimeout(nextDetail, 220);
         });
       }
@@ -2222,12 +2215,30 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     var request = {location: loc, radius: FINDER_SUBURB_RADIUS, type: type};
     var pages = 0;
     var attempt = 0;
-    function doneStep(){ if(cb) cb(); }
+    var finished = false;
+    var added = 0;
+    var timer = null;
+    function doneStep(){
+      if(finished) return;
+      finished = true;
+      if(timer) clearTimeout(timer);
+      if(cb) cb();
+    }
+    function armTimer(){
+      if(timer) clearTimeout(timer);
+      timer = setTimeout(function(){
+        if(finished || stopped || gen !== finderResultGen) return;
+        finished = true;
+        paint(added ? '' : 'That search returned nothing, moving on.');
+        if(cb) cb();
+      }, FINDER_SEARCH_WAIT_MS);
+    }
     function onPage(results, status, pagination){
-      if(stopped || gen !== finderResultGen) return;
+      if(finished || stopped || gen !== finderResultGen) return;
       var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
       if(status === LIMIT && attempt < 2 && pages === 0){
         attempt++;
+        armTimer();
         setTimeout(function(){ service.nearbySearch(request, onPage); }, 1500 * attempt);
         return;
       }
@@ -2258,17 +2269,23 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
           };
           if(!isCommercialProspect(row)) return;
           allResults.push(row);
+          added++;
         });
-        if(suburbsToScan.length <= 3 && pagination && pagination.hasNextPage && pages < 3){
-          setTimeout(function(){ pagination.nextPage(); }, 2000);
-          return;
-        }
+        if(added) paint();
       } else if(status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED){
+        if(timer) clearTimeout(timer);
+        finished = true;
         halt('Google refused the scan. Check that Places is turned on for this key.');
+        return;
+      }
+      if(suburbsToScan.length <= 3 && pagination && pagination.hasNextPage && pages < 3){
+        armTimer();
+        setTimeout(function(){ if(!finished) pagination.nextPage(); }, 400);
         return;
       }
       doneStep();
     }
+    armTimer();
     service.nearbySearch(request, onPage);
   }
 
@@ -2280,15 +2297,8 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     var stepPos = 0;
     function afterStep(){
       if(stopped || gen !== finderResultGen) return;
-      var n = suburbPlaceCount(suburb.name);
-      if(n){
-        publishSuburb(suburb.name);
-        paint(progressLine(suburb.name, n, 0));
-      }
       if(stepPos >= searchPlan.length){
-        publishSuburb(suburb.name);
         suburbPos++;
-        paint(progressLine(suburb.name, n, suburbPos));
         runSuburb();
         return;
       }
