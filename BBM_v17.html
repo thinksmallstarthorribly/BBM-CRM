@@ -2537,20 +2537,15 @@ function draftFinderEmail(place){
   var lines = [];
   lines.push('Hi,');
   lines.push('');
-  lines.push('I looked at ' + name + '. It is ' + placeKindPhrase(kind) + ' in ' + suburb + '.');
+  lines.push(name + ' is ' + placeKindPhrase(kind) + ' in ' + suburb + '.');
   lines.push('');
   if(quote){
-    lines.push('This is on the Google reviews:');
-    lines.push('');
     lines.push('"' + quote + '"');
-    lines.push('');
-  } else {
-    lines.push('I did not find a cleanliness complaint in the reviews I read. I am not going to invent one.');
     lines.push('');
   }
   lines.push(whyThisPlace(kind, suburb));
   lines.push('');
-  lines.push('I do not compete on price. Trust is everything. I do not make promises. I provide proof. I am not the cleaner who shows up, takes a lap, and takes the cash. I want to be a cleaning partner that actually gives a damn. Every week. Every visit. No shortcuts.');
+  lines.push('I do not compete on price. Trust is everything.');
   lines.push('');
   lines.push('From Dust To Trust');
   lines.push('https://www.bigbluemop.com.au');
