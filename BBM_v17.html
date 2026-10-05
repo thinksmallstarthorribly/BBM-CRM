@@ -2381,6 +2381,41 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     });
     return rows;
   }
+  function placeIdentity(place){
+    if(!place) return '';
+    var id = finderPlaceId(place.id || place.place_id);
+    if(id) return id;
+    return finderPlaceName(place) + '|' + (place.formattedAddress || place.formatted_address || place.vicinity || '');
+  }
+  function countPlaces(list){
+    var seenIds = {};
+    var n = 0;
+    (list || []).forEach(function(place){
+      var id = placeIdentity(place);
+      if(!id || seenIds[id]) return;
+      seenIds[id] = 1;
+      n++;
+    });
+    return n;
+  }
+  function countKept(list, suburb){
+    var seenIds = {};
+    var n = 0;
+    (list || []).forEach(function(place){
+      var row = null;
+      try{ row = finderRowFromPlace(place, suburb); }catch(err){ row = null; }
+      if(!row) return;
+      var id = row.place_id || (row.name + '|' + row.address);
+      if(seenIds[id]) return;
+      seenIds[id] = 1;
+      n++;
+    });
+    return n;
+  }
+  function noneHereLine(count, name){
+    var article = /^[aeiou]/i.test(name) ? 'an' : 'a';
+    return 'Checked ' + count + ' places near ' + name + ', none have ' + article + ' ' + name + ' address.';
+  }
   function collectNew(ns, suburb){
     var fields = ['id','displayName','formattedAddress','types','rating','userRatingCount'];
     var center = {lat: suburb.lat, lng: suburb.lng};
@@ -2420,6 +2455,30 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
         if(part.places && part.places.length) flat = flat.concat(part.places);
       });
       return {places: flat, failed: failed && !flat.length, answered: answered};
+    });
+  }
+  function collectTextFallback(ns, suburb){
+    var fields = ['id','displayName','formattedAddress','types','rating','userRatingCount'];
+    var center = {lat: suburb.lat, lng: suburb.lng};
+    var phrases = ['shops', 'medical centre', 'offices'];
+    var jobs = phrases.map(function(phrase){
+      return settleGoogleCall(function(){
+        return ns.Place.searchByText({
+          textQuery: phrase + ' in ' + suburb.name + ' WA',
+          fields: fields,
+          locationBias: {center: center, radius: 3500},
+          maxResultCount: 20,
+          language: 'en',
+          region: 'AU'
+        });
+      }, FINDER_SEARCH_WAIT_MS);
+    });
+    return Promise.all(jobs).then(function(parts){
+      var flat = [];
+      parts.forEach(function(part){
+        if(part && part.places && part.places.length) flat = flat.concat(part.places);
+      });
+      return {places: flat};
     });
   }
   function legacyMapService(suburb, cb){
@@ -2506,11 +2565,17 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
       });
     }
   }
+  var emptyNotes = [];
   function presentSuburb(suburb, rawPlaces, then){
     var rows = [];
     try{ rows = takeRows(rawPlaces, suburb); }
     catch(err){ rows = []; }
-    if(!rows.length){ then(); return; }
+    if(!rows.length){
+      var seenCount = countPlaces(rawPlaces);
+      emptyNotes.push(seenCount ? noneHereLine(seenCount, suburb.name) : ('No commercial places in ' + suburb.name + '.'));
+      then();
+      return;
+    }
     finderStatus('Found ' + rows.length + ' in ' + suburb.name);
     setTimeout(function(){
       if(stopped || gen !== finderResultGen) return;
@@ -2522,8 +2587,9 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     if(pos >= suburbsToScan.length){
       var kept = allResults.filter(function(r){ return r.checked && r.inSuburb !== false; });
       if(!kept.length){
-        var only = suburbsToScan.length === 1 ? suburbsToScan[0].name : 'those suburbs';
-        finderStatus('No commercial places in ' + only + '.');
+        if(emptyNotes.length === 1) finderStatus(emptyNotes[0]);
+        else if(emptyNotes.length) finderStatus(emptyNotes.join(' '));
+        else finderStatus('No commercial places in ' + (suburbsToScan.length === 1 ? suburbsToScan[0].name : 'those suburbs') + '.');
         restoreBtn();
         return;
       }
@@ -2550,9 +2616,19 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
       collectNew(ns, suburb).then(function(pack){
         if(stopped || gen !== finderResultGen) return;
         pack = pack || {places:[], failed:true};
-        if(pack.places && pack.places.length){ afterCollected(pack.places); return; }
-        if(!pack.failed){ afterCollected([]); return; }
-        collectLegacy(suburb, afterLegacy);
+        var first = pack.places || [];
+        if(pack.failed && !first.length){ collectLegacy(suburb, afterLegacy); return; }
+        if(countKept(first, suburb) >= 3 || !ns.Place || typeof ns.Place.searchByText !== 'function'){
+          afterCollected(first);
+          return;
+        }
+        collectTextFallback(ns, suburb).then(function(extra){
+          if(stopped || gen !== finderResultGen) return;
+          afterCollected(first.concat((extra && extra.places) || []));
+        }).catch(function(){
+          if(stopped || gen !== finderResultGen) return;
+          afterCollected(first);
+        });
       }).catch(function(){
         if(stopped || gen !== finderResultGen) return;
         collectLegacy(suburb, afterLegacy);
