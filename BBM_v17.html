@@ -2513,49 +2513,52 @@ function plainPlaceKind(type){
   if(t.indexOf('office') >= 0) return 'office';
   return 'commercial place';
 }
-function placeKindPhrase(kind){
-  if(kind === 'office') return 'an office';
-  return 'a ' + kind;
-}
-function whyThisPlace(kind, suburb){
-  if(kind === 'shop') return 'A shop in ' + suburb + ' is judged in the first few steps. People feel the floor and the bathroom before they buy anything. That is about the place feeling right, not about it looking shiny.';
-  if(kind === 'medical place') return 'A medical place in ' + suburb + ' is where people are already uneasy. The bathroom and the waiting room are what they remember. It says whether the practice cares about them.';
-  if(kind === 'shopping centre') return 'A shopping centre in ' + suburb + ' puts a lot of people through the same toilets and food areas. Those rooms are the visit. It is not about the floors looking shiny.';
-  if(kind === 'office') return 'An office in ' + suburb + ' is where people have to work all day. A clean workspace says the business cares about its people and its clients. It is about feeling right and being able to work, not about looking shiny.';
-  if(kind === 'government office') return 'A government office in ' + suburb + ' is full of people who have to be there. The bathrooms and waiting areas are the visit. It is about the place feeling right, not about it looking shiny.';
-  if(kind === 'strata office') return 'A strata office in ' + suburb + ' is where owners and tenants sort out the building. The rooms they use are the building. That is about people being able to work, not about looking shiny.';
-  return 'A ' + kind + ' in ' + suburb + ' is judged on the rooms customers and staff actually use. Cleanliness is about people being able to work, not about looking shiny.';
-}
 function draftFinderEmail(place){
-  var name = (place && place.name) || 'this business';
+  var name = (place && place.name) || 'there';
   var suburb = (place && place.suburb) || 'the suburb';
   var kind = plainPlaceKind(place && place.type);
   var quote = '';
   if(place && placeHasPremisesComplaint(place)){
     quote = String(place.issue).replace(/^["“”']+|["“”']+$/g, '').trim();
   }
-  var lines = [];
-  lines.push('Hi,');
-  lines.push('');
-  lines.push(name + ' is ' + placeKindPhrase(kind) + ' in ' + suburb + '.');
-  lines.push('');
+  var where = name.toLowerCase().indexOf(String(suburb).toLowerCase()) === -1 ? (' in ' + suburb) : '';
+  var seen = '';
+  var why = '';
+  if(kind === 'shop'){
+    seen = name + ' gets a lot of foot traffic' + where + '. People bring dust and dirt in off the street.';
+    why = 'Customers notice the floor and the bathroom before they notice much else.';
+  } else if(kind === 'medical place'){
+    seen = 'People waiting at ' + name + where + ' are often already uncomfortable.';
+    why = 'They remember the waiting room and the bathroom more than the paperwork.';
+  } else if(kind === 'office'){
+    seen = 'The team at ' + name + ' is on the office floor' + where + ' all day.';
+    why = 'The kitchen and the bathroom are the rooms they actually use between meetings.';
+  } else if(kind === 'shopping centre'){
+    seen = name + ' moves a lot of people through the food court and the toilets' + where + '.';
+    why = 'Those are the rooms shoppers talk about on the way out.';
+  } else if(kind === 'government office'){
+    seen = 'People coming into ' + name + where + ' often have to wait.';
+    why = 'The waiting area and the bathrooms are a big part of that visit.';
+  } else if(kind === 'strata office'){
+    seen = 'Owners and tenants come through ' + name + where + ' to sort out the building.';
+    why = 'The rooms they sit in are part of how the building feels to them.';
+  } else {
+    seen = 'Staff and customers share the rooms at ' + name + where + ' every day.';
+    why = 'A dirty floor shows up where people are actually working.';
+  }
+  var lines = ['Hi,', '', seen, why, ''];
   if(quote){
-    lines.push('"' + quote + '"');
+    lines.push('Someone who visited said: "' + quote + '"');
     lines.push('');
   }
-  lines.push(whyThisPlace(kind, suburb));
-  lines.push('');
-  lines.push('I do not compete on price. Trust is everything.');
-  lines.push('');
-  lines.push('From Dust To Trust');
-  lines.push('https://www.bigbluemop.com.au');
-  lines.push('See the work: https://www.instagram.com/big_blue_mop/');
+  lines.push('If it is useful, I can come past and talk about a regular clean.');
   lines.push('');
   lines.push('Alex');
   lines.push('Big Blue Mop');
   lines.push('0410 260 800');
   lines.push('bigbluemop@gmail.com');
-  return {subject: name + ' in ' + suburb, body: lines.join('\n')};
+  lines.push('https://www.bigbluemop.com.au');
+  return {subject: 'From Alex at Big Blue Mop', body: lines.join('\n')};
 }
 function draftBoxHtml(listName, idx, place){
   var open = !!(place && place.place_id && finderDraftOpen[place.place_id]);
