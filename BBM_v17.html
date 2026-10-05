@@ -283,6 +283,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .fr-tag.stars-ok{background:var(--s2);color:var(--t2)}
 .fr-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .fr-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--s2);color:var(--t2);border:1.5px solid var(--bd)}
+.fr-reach{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.fr-chip-reach{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(34,181,115,.14);color:#127a48;border:1.5px solid #22B573}
+.fr-chip-miss{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--s2);color:var(--t3);border:1.5px solid var(--bd)}
+.fr-card.needs-contact{opacity:.72}
 .fr-issue{font-size:12px;color:var(--t2);line-height:1.5;border-left:2px solid var(--bd);padding-left:9px;margin-bottom:10px}
 /* CALENDAR */
 #v-cal{overflow:hidden}
@@ -2201,6 +2205,46 @@ function finderPlaceName(place){
   if(typeof place.displayName === 'string') return place.displayName;
   return place.name || '';
 }
+function finderText(value){
+  if(value == null) return '';
+  if(typeof value === 'string') return value.trim();
+  if(typeof value.text === 'string') return value.text.trim();
+  return '';
+}
+function placePhone(place){
+  if(!place) return '';
+  return finderText(place.internationalPhoneNumber)
+    || finderText(place.international_phone_number)
+    || finderText(place.nationalPhoneNumber)
+    || finderText(place.formatted_phone_number)
+    || finderText(place.phone)
+    || '';
+}
+function placeWebsite(place){
+  if(!place) return '';
+  return finderText(place.websiteURI) || finderText(place.website) || '';
+}
+function placeMapsUrl(place){
+  if(!place) return '';
+  var url = finderText(place.googleMapsURI) || finderText(place.url) || finderText(place.mapsUrl);
+  if(url) return url;
+  var id = finderPlaceId(place.id || place.place_id || '');
+  if(!id) return '';
+  return 'https://www.google.com/maps/search/?api=1&query_place_id=' + encodeURIComponent(id);
+}
+function finderLeadMatch(name){
+  var key = String(name || '').toLowerCase().trim();
+  if(!key || typeof leads === 'undefined' || !leads) return null;
+  for(var i = 0; i < leads.length; i++){
+    if(String(leads[i].name || '').toLowerCase().trim() === key) return leads[i];
+  }
+  return null;
+}
+function finderHandOrLead(r, field){
+  if(r && Object.prototype.hasOwnProperty.call(r, field)) return r[field] || '';
+  var lead = finderLeadMatch(r && r.name);
+  return (lead && lead[field]) || '';
+}
 function finderRowFromPlace(place, suburb){
   if(!place) return null;
   var formatted = place.formattedAddress || place.formatted_address || '';
@@ -2227,6 +2271,9 @@ function finderRowFromPlace(place, suburb){
     reviewsRead: false,
     inSuburb: true,
     inCleanlinessSearch: true,
+    phone: placePhone(place),
+    website: placeWebsite(place),
+    mapsUrl: placeMapsUrl(place),
     _place: place
   };
   var here = placeLatLng(place);
@@ -2339,6 +2386,12 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     }
     var here = placeLatLng(detail);
     if(here){ place.lat = here.lat; place.lng = here.lng; }
+    var phone = placePhone(detail);
+    var website = placeWebsite(detail);
+    var maps = placeMapsUrl(detail);
+    if(phone) place.phone = phone;
+    if(website) place.website = website;
+    if(maps) place.mapsUrl = maps;
     if(!placeKeptForScan(place.address, place.plusCode || '', place.addressComponents, place.suburb, place.formattedAddress || '', nearFromRow(place))){
       place.inSuburb = false;
     }
@@ -2379,7 +2432,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     var live = place._place;
     if(live && typeof live.fetchFields === 'function'){
       try{
-        var pendingFields = live.fetchFields({fields:['reviews','formattedAddress','addressComponents','location']});
+        var pendingFields = live.fetchFields({fields:['reviews','formattedAddress','addressComponents','location','nationalPhoneNumber','internationalPhoneNumber','websiteURI','googleMapsURI']});
         if(!pendingFields || typeof pendingFields.then !== 'function'){
           finishDetail(null, false);
           return;
@@ -2391,7 +2444,12 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
               reviews: src.reviews || live.reviews || [],
               formatted_address: src.formattedAddress || live.formattedAddress || '',
               address_components: src.addressComponents || live.addressComponents || null,
-              location: src.location || live.location || null
+              location: src.location || live.location || null,
+              internationalPhoneNumber: src.internationalPhoneNumber || live.internationalPhoneNumber || '',
+              nationalPhoneNumber: src.nationalPhoneNumber || live.nationalPhoneNumber || '',
+              websiteURI: src.websiteURI || live.websiteURI || '',
+              googleMapsURI: src.googleMapsURI || live.googleMapsURI || '',
+              id: src.id || live.id || place.place_id || ''
             }, true);
           }catch(err){ finishDetail(null, false); }
         }, function(){ finishDetail(null, false); });
@@ -2405,7 +2463,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
         try{
           legacyService.getDetails({
             placeId: place.place_id,
-            fields: ['reviews', 'address_components', 'formatted_address', 'geometry']
+            fields: ['reviews', 'address_components', 'formatted_address', 'geometry', 'formatted_phone_number', 'international_phone_number', 'website', 'url']
           }, function(detail, status){
             if(finished || gen !== finderResultGen) return;
             try{
@@ -3029,6 +3087,54 @@ function copyFinderDraft(listName, idx, ev){
     toast('Copy failed','w');
   }
 }
+function finderReachChips(r){
+  var bits = [];
+  if(r && r.phone) bits.push('<span class="fr-chip-reach">Phone</span>');
+  if(r && r.website) bits.push('<span class="fr-chip-reach">Website</span>');
+  if(!bits.length) bits.push('<span class="fr-chip-miss">Find contact</span>');
+  return '<div class="fr-reach">' + bits.join('') + '</div>';
+}
+function finderTelHref(phone){
+  var n = String(phone || '').replace(/[^\d+]/g, '');
+  return n ? ('tel:' + n) : '';
+}
+function finderSiteHref(site){
+  var s = String(site || '').trim();
+  if(!s) return '';
+  if(!/^https?:\/\//i.test(s)) s = 'https://' + s;
+  return s;
+}
+function finderSetHandContact(listName, idx, field, value){
+  if(field !== 'contact' && field !== 'email') return;
+  var list = listName === 'commercial' ? finderCommercial : finderPool;
+  var place = list && list[idx];
+  if(!place) return;
+  place[field] = value == null ? '' : String(value);
+}
+function finderContactBlock(listName, idx, r){
+  var phone = r && r.phone ? String(r.phone) : '';
+  var site = r && r.website ? String(r.website) : '';
+  var maps = r && r.mapsUrl ? String(r.mapsUrl) : '';
+  var phoneHtml = phone
+    ? '<a href="' + e(finderTelHref(phone)) + '" style="color:#127a48;font-weight:800;font-size:12px">' + e(phone) + '</a>'
+    : '<span class="fr-chip-miss">No phone on Google</span>';
+  var siteHtml = site
+    ? '<a href="' + e(finderSiteHref(site)) + '" target="_blank" rel="noopener" style="color:#127a48;font-weight:800;font-size:12px;word-break:break-all">' + e(site) + '</a>'
+    : '<span class="fr-chip-miss">No website on Google</span>';
+  var mapsHtml = maps
+    ? '<div style="margin-top:6px"><a href="' + e(maps) + '" target="_blank" rel="noopener" style="color:var(--cyd);font-weight:800;font-size:12px">Google Maps</a></div>'
+    : '';
+  var contact = finderHandOrLead(r, 'contact');
+  var email = finderHandOrLead(r, 'email');
+  return '<div style="margin-top:10px">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + phoneHtml + siteHtml + '</div>'
+    + mapsHtml
+    + '<div style="font-size:11px;color:var(--t3);line-height:1.4;margin:8px 0 6px">Google does not send a contact name or email. Add them here if you find them.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    + '<input class="finder-inp" type="text" placeholder="Contact name" value="' + e(contact) + '" onclick="event.stopPropagation()" oninput="finderSetHandContact(\'' + listName + '\',' + idx + ',\'contact\',this.value)">'
+    + '<input class="finder-inp" type="email" placeholder="Email" value="' + e(email) + '" onclick="event.stopPropagation()" oninput="finderSetHandContact(\'' + listName + '\',' + idx + ',\'email\',this.value)">'
+    + '</div></div>';
+}
 function cleanlinessCard(r, idx, existingNamesLocal){
   var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
   var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#E84040';
@@ -3037,11 +3143,13 @@ function cleanlinessCard(r, idx, existingNamesLocal){
   var imported = finderImported[r.name] || existingNamesLocal.has((r.name||'').toLowerCase().trim());
   var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
   var open = !!(r.place_id && finderFold.place[r.place_id]);
-  return '<div class="fr-card" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+  var reachCls = (r.phone || r.website) ? '' : ' needs-contact';
+  return '<div class="fr-card'+reachCls+'" id="frc-'+idx+'" style="border-left:4px solid '+borderColor+';margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
     + '<div id="frc-h-'+idx+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer" onclick="finderToggle('+idx+')">'
     + '<div style="flex:1;min-width:0">'
     + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
     + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.type)+'</div>'
+    + finderReachChips(r)
     + '</div>'
     + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
     + '<div style="text-align:right">'
@@ -3056,6 +3164,7 @@ function cleanlinessCard(r, idx, existingNamesLocal){
     + '<span class="fr-tag '+starCls+'">'+starText+'</span>'
     + '<span class="fr-tag">'+e(r.address)+'</span>'
     + '</div>'
+    + finderContactBlock('clean', idx, r)
     + (r.issue ? '<div class="fr-issue" style="margin-top:10px">&ldquo;'+e(r.issue)+'&rdquo;</div>' : '')
     + olderReviewsControl('clean', idx, r)
     + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
@@ -3076,11 +3185,13 @@ function commercialCard(r, idx, existingNamesLocal){
   var note = commercialOutreachNote(r);
   var starText = typeof r.stars === 'number' ? ('★ '+r.stars+' ('+(r.reviews||0).toLocaleString()+' reviews)') : 'No Google rating';
   var open = !!(r.place_id && finderFold.place[r.place_id]);
-  return '<div class="fr-card" id="frx-'+idx+'" style="border-left:4px solid #8B93D6;margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
+  var reachCls = (r.phone || r.website) ? '' : ' needs-contact';
+  return '<div class="fr-card'+reachCls+'" id="frx-'+idx+'" style="border-left:4px solid #8B93D6;margin-bottom:8px;padding:10px 12px;'+(imported?'border-color:#22B573;background:rgba(34,181,115,.04)':'')+'">'
     + '<div id="frx-h-'+idx+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer" onclick="finderToggleCommercial('+idx+')">'
     + '<div style="flex:1;min-width:0">'
     + '<div style="font-size:14px;font-weight:900;color:var(--tx)">'+e(r.name)+'</div>'
     + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+e(r.type)+'</div>'
+    + finderReachChips(r)
     + '</div>'
     + '<div id="frx-arr-'+idx+'" style="font-size:14px;color:var(--t3);flex-shrink:0;transition:transform .2s'+(open?';transform:rotate(90deg)':'')+'">&#9654;</div>'
     + '</div>'
@@ -3090,6 +3201,7 @@ function commercialCard(r, idx, existingNamesLocal){
     + '<span class="fr-tag">'+starText+'</span>'
     + '<span class="fr-tag">'+e(r.address)+'</span>'
     + '</div>'
+    + finderContactBlock('commercial', idx, r)
     + '<div style="margin-top:10px;font-size:12px;color:var(--t2);line-height:1.45">'+e(note)+'</div>'
     + olderReviewsControl('commercial', idx, r)
     + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">'
@@ -3112,17 +3224,29 @@ function csvCell(value){
 }
 function exportFinderCsv(){
   var rows = [];
-  (finderPool || []).forEach(function(r){ rows.push(r); });
-  (finderCommercial || []).forEach(function(r){ rows.push(r); });
+  (finderPool || []).forEach(function(r){ rows.push({r:r, list:'Cleanliness'}); });
+  (finderCommercial || []).forEach(function(r){ rows.push({r:r, list:'Commercial'}); });
   if(!rows.length){ toast('Nothing to export yet','w'); return; }
-  var lines = [['Business name','Suburb','Address','Type','Cleanliness complaint'].map(csvCell).join(',')];
-  rows.forEach(function(r){
+  var lines = [['Business name','Suburb','Address','Type','List','Google rating','Review count','Phone','Website','Google Maps link','Cleanliness complaint','Complaint quote','Contact name','Email'].map(csvCell).join(',')];
+  rows.forEach(function(item){
+    var r = item.r;
+    var lead = finderLeadMatch(r.name);
+    var complaint = placeHasPremisesComplaint(r);
     lines.push([
       r.name || '',
       r.suburb || '',
       r.address || '',
       r.type || '',
-      placeHasPremisesComplaint(r) ? 'Yes' : 'No'
+      item.list,
+      typeof r.stars === 'number' ? String(r.stars) : '',
+      r.reviews || 0,
+      r.phone || (lead && lead.phone) || '',
+      r.website || '',
+      r.mapsUrl || '',
+      complaint ? 'Yes' : 'No',
+      complaint ? (r.issue || '') : '',
+      finderHandOrLead(r, 'contact'),
+      finderHandOrLead(r, 'email')
     ].map(csvCell).join(','));
   });
   var blob = new Blob(['\uFEFF' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
@@ -3159,6 +3283,19 @@ function renderFinderResults(results, commercial){
   (finderPublishedSuburbs || []).forEach(function(name){ bucket(name); });
   results.forEach(function(r, idx){ bucket(r.suburb).clean.push({r:r, idx:idx}); });
   commercial.forEach(function(r, idx){ bucket(r.suburb).commercial.push({r:r, idx:idx}); });
+  function outreachFirst(items){
+    var ready = [];
+    var later = [];
+    items.forEach(function(item){
+      if(item.r && (item.r.phone || item.r.website)) ready.push(item);
+      else later.push(item);
+    });
+    return ready.concat(later);
+  }
+  order.forEach(function(key){
+    buckets[key].clean = outreachFirst(buckets[key].clean);
+    buckets[key].commercial = outreachFirst(buckets[key].commercial);
+  });
   var rank = {};
   (finderSuburbOrder || []).forEach(function(name, i){ rank[finderKey(name)] = i; });
   order.sort(function(a, b){
@@ -3241,12 +3378,14 @@ function mkLeadFromPool(r){
   if(complaint){
     notes = 'Imported via Lead Finder on ' + when
       + '\nReview: "'+r.issue+'"'+(r.reviewAuthor ? ' — '+r.reviewAuthor : '')+(r.reviewStars!=null ? ', '+r.reviewStars+' stars' : '')+(r.reviewWhen ? ', '+r.reviewWhen : '')
+      + (r.phone ? '\nPhone: '+r.phone : '')
       + (r.website ? '\nWebsite: '+r.website : '')
       + (typeof r.stars === 'number' ? '\nGoogle: '+r.stars+' stars ('+r.reviews+' reviews)' : '');
   } else {
     notes = 'Imported via Lead Finder on ' + when
       + '\nNo premises complaint in the reviews Google returned. Outreach target only.'
       + (typeof r.stars === 'number' ? '\nGoogle: '+r.stars+' stars ('+(r.reviews||0)+' reviews)' : '\nNo Google rating on file.')
+      + (r.phone ? '\nPhone: '+r.phone : '')
       + (r.website ? '\nWebsite: '+r.website : '');
   }
   return {
@@ -3255,7 +3394,7 @@ function mkLeadFromPool(r){
     stars: typeof r.stars === 'number' ? r.stars : '', reviews: r.reviews||0,
     keyIssue: complaint ? r.issue : '',
     reviewStars: complaint && typeof r.reviewStars === 'number' ? r.reviewStars : '',
-    contact:'', phone: r.phone||'', email:'', stage:'To Contact', quote:null, e1:'',
+    contact: r.contact || '', phone: r.phone||'', email: r.email || '', stage:'To Contact', quote:null, e1:'',
     nextDate:'',
     nextAction: complaint
       ? 'Copy the review email, send it, then mark it sent'
