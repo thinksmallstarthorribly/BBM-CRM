@@ -1698,12 +1698,17 @@ function finderMapType(types){
   return 'Commercial';
 }
 var FINDER_HOME_TYPES = {premise:1,subpremise:1,street_address:1,route:1,locality:1,neighborhood:1,political:1,postal_code:1,plus_code:1,intersection:1,colloquial_area:1,floor:1,room:1,geocode:1};
+var FINDER_LAND_TYPES = {park:1,playground:1,natural_feature:1};
 function isCommercialProspect(row){
   var types = (row && row.rawTypes) || [];
+  var name = String((row && row.name) || '').trim();
+  if(/\b(park|reserve|playground)s?$/i.test(name)) return false;
+  if(/\bestates?\b/i.test(name) && !/real\s+estates?\b/i.test(name)) return false;
   if(!types.length) return true;
   var commercialHit = false;
   var homeish = false;
   for(var i=0;i<types.length;i++){
+    if(FINDER_LAND_TYPES[types[i]]) return false;
     if(FINDER_HOME_TYPES[types[i]]) homeish = true;
     else if(types[i] !== 'point_of_interest' && types[i] !== 'establishment') commercialHit = true;
   }
@@ -1717,8 +1722,28 @@ function expandFinderTypes(type){
 }
 var FINDER_SUBURB_RADIUS = 3000;
 var FINDER_STATE_NAMES = {'wa':1,'western australia':1,'nsw':1,'new south wales':1,'vic':1,'victoria':1,'qld':1,'queensland':1,'sa':1,'south australia':1,'tas':1,'tasmania':1,'nt':1,'northern territory':1,'act':1,'australian capital territory':1,'australia':1};
+function foldApostrophe(value){
+  return String(value || '').replace(/[\u2018\u2019\u201A\u201B\u2032\u02BC\u0060\u00B4]/g, "'");
+}
 function normalizeSuburb(name){
-  return String(name || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+  return foldApostrophe(name).toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+}
+function suburbFold(name){
+  return normalizeSuburb(name).replace(/'/g, '');
+}
+function suburbWords(text){
+  return suburbFold(String(text || '').replace(/[,/]/g, ' ')).replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(Boolean);
+}
+function sameSuburb(a, b){
+  var left = suburbFold(a);
+  var right = suburbFold(b);
+  return !!left && left === right;
+}
+function componentText(part){
+  if(!part) return '';
+  var value = part.longText || part.long_name || part.shortText || part.short_name || '';
+  if(value && typeof value === 'object') value = value.text || '';
+  return String(value || '');
 }
 function suburbAliases(name){
   var n = normalizeSuburb(name);
@@ -1792,7 +1817,10 @@ function suburbDisplayName(key){
     if(w === 'cbd') return 'CBD';
     if(w === 'mt') return 'Mt';
     if(!w) return '';
-    return w.charAt(0).toUpperCase() + w.slice(1);
+    return w.split("'").map(function(part){
+      if(!part) return '';
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join("'");
   }).join(' ');
 }
 function findTableSuburb(typed){
@@ -1879,29 +1907,13 @@ function selectedFinderSuburbs(){
 }
 renderSuburbPicks();
 function mentionsSuburbName(text, suburbName){
-  var target = normalizeSuburb(suburbName);
-  if(!target || !text) return false;
-  var words = normalizeSuburb(String(text).replace(/[,/]/g, ' ')).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
-  var targetWords = target.split(' ').filter(Boolean);
-  if(!targetWords.length || words.length < targetWords.length) return false;
-  for(var i = 0; i <= words.length - targetWords.length; i++){
-    var ok = true;
-    for(var j = 0; j < targetWords.length; j++){
-      if(words[i + j] !== targetWords[j]){ ok = false; break; }
-    }
-    if(!ok) continue;
-    var prev = i > 0 ? words[i - 1] : '';
-    if(prev && FINDER_SUBURB_PREFIXES[prev]) continue;
-    return true;
-  }
-  return false;
+  return suburbMentionKind(text, suburbName) === 'exact';
 }
 function suburbMentionKind(text, suburbName){
-  var target = normalizeSuburb(suburbName);
-  if(!target || !text) return '';
-  var words = normalizeSuburb(String(text).replace(/[,/]/g, ' ')).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
-  var targetWords = target.split(' ').filter(Boolean);
-  if(!targetWords.length || words.length < targetWords.length) return '';
+  var targetWords = suburbWords(suburbName);
+  if(!targetWords.length || !text) return '';
+  var words = suburbWords(text);
+  if(words.length < targetWords.length) return '';
   var kind = '';
   for(var i = 0; i <= words.length - targetWords.length; i++){
     var ok = true;
@@ -1914,6 +1926,24 @@ function suburbMentionKind(text, suburbName){
     else return 'exact';
   }
   return kind;
+}
+function addressSuburbSlots(text, components){
+  var slots = [];
+  function add(loc){
+    var clean = cleanAddressSegment(loc);
+    if(!clean || looksLikeStreet(clean) || FINDER_STATE_NAMES[clean]) return;
+    if(slots.indexOf(clean) === -1) slots.push(clean);
+  }
+  var re = /([^,\n]+?)\s+(?:WA|NSW|VIC|QLD|SA|TAS|NT|ACT)\b(?:\s+\d{4})?/gi;
+  var src = String(text || '');
+  var match;
+  while((match = re.exec(src))) add(match[1]);
+  (components || []).forEach(function(part){
+    var types = (part && part.types) || [];
+    if(types.indexOf('locality') === -1 && types.indexOf('postal_town') === -1) return;
+    add(componentText(part));
+  });
+  return slots;
 }
 function finderTextBlob(vicinity, plusCode, components, formatted){
   var chunks = [];
@@ -1931,6 +1961,17 @@ function finderTextBlob(vicinity, plusCode, components, formatted){
 function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted){
   var blob = finderTextBlob(vicinity, plusCode, components, formatted);
   if(!normalizeSuburb(blob)) return true;
+  var slots = addressSuburbSlots([formatted, vicinity].filter(Boolean).join(', '), components);
+  var specific = [];
+  for(var s = 0; s < slots.length; s++){
+    if(normalizeSuburb(slots[s]) !== 'perth' && specific.indexOf(slots[s]) === -1) specific.push(slots[s]);
+  }
+  if(specific.length){
+    for(var n = 0; n < specific.length; n++){
+      if(!sameSuburb(specific[n], suburbName)) return false;
+    }
+    return true;
+  }
   var own = suburbMentionKind(blob, suburbName);
   if(own === 'exact') return true;
   if(own === 'prefixed') return false;
@@ -1938,7 +1979,8 @@ function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted)
   var keys = Object.keys(MASTER_SUBURB_COORDS);
   for(var i = 0; i < keys.length; i++){
     if(keys[i] === target || keys[i] === 'perth') continue;
-    if(suburbMentionKind(blob, keys[i]) === 'exact') return false;
+    var kind = suburbMentionKind(blob, keys[i]);
+    if(kind === 'exact' || kind === 'prefixed') return false;
   }
   return true;
 }
@@ -2579,7 +2621,16 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     finderStatus('Found ' + rows.length + ' in ' + suburb.name);
     setTimeout(function(){
       if(stopped || gen !== finderResultGen) return;
-      walkRows(rows, suburb, then);
+      walkRows(rows, suburb, function(){
+        var still = rows.filter(function(r){
+          return r.inSuburb !== false && rowInScannedSuburb(r) && isCommercialProspect(r);
+        });
+        if(!still.length){
+          var seenCount = countPlaces(rawPlaces);
+          emptyNotes.push(seenCount ? noneHereLine(seenCount, suburb.name) : ('No commercial places in ' + suburb.name + '.'));
+        }
+        then();
+      });
     }, 600);
   }
   function scanAt(pos){
