@@ -1958,9 +1958,40 @@ function finderTextBlob(vicinity, plusCode, components, formatted){
   });
   return chunks.join(' ');
 }
-function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted){
+var FINDER_PERTH_ONLY_KM = 1.5;
+function placeLatLng(place){
+  if(!place) return null;
+  var loc = place.location || (place.geometry && place.geometry.location) || null;
+  if(!loc && typeof place.lat === 'number') loc = place;
+  if(!loc) return null;
+  var lat = typeof loc.lat === 'function' ? loc.lat() : loc.lat;
+  var lng = typeof loc.lng === 'function' ? loc.lng() : loc.lng;
+  if(typeof lat !== 'number' && loc.latitude != null) lat = Number(loc.latitude);
+  if(typeof lng !== 'number' && loc.longitude != null) lng = Number(loc.longitude);
+  if(typeof lat !== 'number' || typeof lng !== 'number' || !isFinite(lat) || !isFinite(lng)) return null;
+  return {lat: lat, lng: lng};
+}
+function kmBetween(lat1, lng1, lat2, lng2){
+  var r = 6371;
+  var p = Math.PI / 180;
+  var dLat = (lat2 - lat1) * p;
+  var dLng = (lng2 - lng1) * p;
+  var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * p) * Math.cos(lat2 * p) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * r * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function closeToSuburbPin(near){
+  if(!near) return false;
+  var lat = near.lat, lng = near.lng, clat = near.centerLat, clng = near.centerLng;
+  if(typeof lat !== 'number' || typeof lng !== 'number' || typeof clat !== 'number' || typeof clng !== 'number') return false;
+  if(!isFinite(lat) || !isFinite(lng) || !isFinite(clat) || !isFinite(clng)) return false;
+  return kmBetween(lat, lng, clat, clng) <= FINDER_PERTH_ONLY_KM;
+}
+function nearFromRow(row){
+  if(!row) return null;
+  return {lat: row.lat, lng: row.lng, centerLat: row.scanLat, centerLng: row.scanLng};
+}
+function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted, near){
   var blob = finderTextBlob(vicinity, plusCode, components, formatted);
-  if(!normalizeSuburb(blob)) return true;
   var slots = addressSuburbSlots([formatted, vicinity].filter(Boolean).join(', '), components);
   var specific = [];
   for(var s = 0; s < slots.length; s++){
@@ -1972,24 +2003,26 @@ function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted)
     }
     return true;
   }
-  var own = suburbMentionKind(blob, suburbName);
-  if(own === 'exact') return true;
-  if(own === 'prefixed') return false;
-  var target = normalizeSuburb(suburbName);
-  var keys = Object.keys(MASTER_SUBURB_COORDS);
-  for(var i = 0; i < keys.length; i++){
-    if(keys[i] === target || keys[i] === 'perth') continue;
-    var kind = suburbMentionKind(blob, keys[i]);
-    if(kind === 'exact' || kind === 'prefixed') return false;
+  if(normalizeSuburb(blob)){
+    var own = suburbMentionKind(blob, suburbName);
+    if(own === 'exact') return true;
+    if(own === 'prefixed') return false;
+    var target = normalizeSuburb(suburbName);
+    var keys = Object.keys(MASTER_SUBURB_COORDS);
+    for(var i = 0; i < keys.length; i++){
+      if(keys[i] === target || keys[i] === 'perth') continue;
+      var kind = suburbMentionKind(blob, keys[i]);
+      if(kind === 'exact' || kind === 'prefixed') return false;
+    }
   }
-  return true;
+  return closeToSuburbPin(near);
 }
-function placeInSuburb(vicinity, plusCode, components, suburbName, formatted){
-  return placeKeptForScan(vicinity, plusCode, components, suburbName, formatted);
+function placeInSuburb(vicinity, plusCode, components, suburbName, formatted, near){
+  return placeKeptForScan(vicinity, plusCode, components, suburbName, formatted, near);
 }
 function rowInScannedSuburb(row){
   if(!row || row.inSuburb === false) return false;
-  return placeKeptForScan(row.address, row.plusCode || '', row.addressComponents, row.suburb, row.formattedAddress || '');
+  return placeKeptForScan(row.address, row.plusCode || '', row.addressComponents, row.suburb, row.formattedAddress || '', nearFromRow(row));
 }
 function finderSearchPlan(type){
   var selected = expandFinderTypes(type);
@@ -2196,9 +2229,13 @@ function finderRowFromPlace(place, suburb){
     inCleanlinessSearch: true,
     _place: place
   };
+  var here = placeLatLng(place);
+  if(here){ row.lat = here.lat; row.lng = here.lng; }
+  row.scanLat = suburb.lat;
+  row.scanLng = suburb.lng;
   if(!row.place_id && !row.name) return null;
   if(!isCommercialProspect(row)) return null;
-  if(!placeKeptForScan(vicinity, row.plusCode, components, suburb.name, formatted || vicinity)) return null;
+  if(!placeKeptForScan(vicinity, row.plusCode, components, suburb.name, formatted || vicinity, nearFromRow(row))) return null;
   return row;
 }
 
@@ -2300,7 +2337,9 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
       place.address = formatted;
       place.formattedAddress = formatted;
     }
-    if(!placeKeptForScan(place.address, place.plusCode || '', place.addressComponents, place.suburb, place.formattedAddress || '')){
+    var here = placeLatLng(detail);
+    if(here){ place.lat = here.lat; place.lng = here.lng; }
+    if(!placeKeptForScan(place.address, place.plusCode || '', place.addressComponents, place.suburb, place.formattedAddress || '', nearFromRow(place))){
       place.inSuburb = false;
     }
     var reviews = detail.reviews || [];
@@ -2340,7 +2379,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     var live = place._place;
     if(live && typeof live.fetchFields === 'function'){
       try{
-        var pendingFields = live.fetchFields({fields:['reviews','formattedAddress','addressComponents']});
+        var pendingFields = live.fetchFields({fields:['reviews','formattedAddress','addressComponents','location']});
         if(!pendingFields || typeof pendingFields.then !== 'function'){
           finishDetail(null, false);
           return;
@@ -2351,7 +2390,8 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
             finishDetail({
               reviews: src.reviews || live.reviews || [],
               formatted_address: src.formattedAddress || live.formattedAddress || '',
-              address_components: src.addressComponents || live.addressComponents || null
+              address_components: src.addressComponents || live.addressComponents || null,
+              location: src.location || live.location || null
             }, true);
           }catch(err){ finishDetail(null, false); }
         }, function(){ finishDetail(null, false); });
@@ -2365,7 +2405,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
         try{
           legacyService.getDetails({
             placeId: place.place_id,
-            fields: ['reviews', 'address_components', 'formatted_address']
+            fields: ['reviews', 'address_components', 'formatted_address', 'geometry']
           }, function(detail, status){
             if(finished || gen !== finderResultGen) return;
             try{
@@ -2459,7 +2499,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     return 'Checked ' + count + ' places near ' + name + ', none have ' + article + ' ' + name + ' address.';
   }
   function collectNew(ns, suburb){
-    var fields = ['id','displayName','formattedAddress','types','rating','userRatingCount'];
+    var fields = ['id','displayName','formattedAddress','location','types','rating','userRatingCount'];
     var center = {lat: suburb.lat, lng: suburb.lng};
     var types = expandFinderTypes('all');
     var jobs = types.map(function(type){
@@ -2500,7 +2540,7 @@ function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey,
     });
   }
   function collectTextFallback(ns, suburb){
-    var fields = ['id','displayName','formattedAddress','types','rating','userRatingCount'];
+    var fields = ['id','displayName','formattedAddress','location','types','rating','userRatingCount'];
     var center = {lat: suburb.lat, lng: suburb.lng};
     var phrases = ['shops', 'medical centre', 'offices'];
     var jobs = phrases.map(function(phrase){
