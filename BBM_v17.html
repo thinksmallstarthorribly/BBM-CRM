@@ -252,6 +252,8 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .finder-cfg-t{font-size:14px;font-weight:900;color:var(--cyd);margin-bottom:12px}
 .finder-field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
 .finder-label{font-size:9px;color:var(--t3);font-family:var(--m);letter-spacing:.5px;text-transform:uppercase}
+.finder-choice{display:flex;align-items:flex-start;gap:8px;font-size:13px;font-weight:700;color:var(--tx);line-height:1.35;padding:7px 2px;cursor:pointer}
+.finder-choice input{margin-top:2px;flex-shrink:0}
 .finder-inp{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
 .finder-inp:focus{border-color:var(--cy)}
 .finder-sel{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
@@ -621,16 +623,12 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             <div style="height:1px;background:var(--bd);margin:10px 0"></div>
 
             <div class="finder-field">
-              <div class="finder-label">Suburbs to Scan</div>
-              <select class="finder-sel" id="f-suburbs-mode" onchange="toggleSuburbInput()">
-                <option value="preset">Inner North — Alex's patch (14 suburbs)</option>
-                <option value="north">North Metro — Joondalup to Wanneroo (17 suburbs)</option>
-                <option value="east">East &amp; Hills — Midland to Kalamunda (16 suburbs)</option>
-                <option value="south">South Metro — Fremantle to Armadale (18 suburbs)</option>
-                <option value="metro_all">&#127758; Full Perth Metro — ALL zones (65+ suburbs)</option>
-                <option value="custom">Custom suburb — type any suburb</option>
-              </select>
-              <input class="finder-inp" id="f-suburb-custom" placeholder="e.g. Kalamunda" style="margin-top:6px;display:none">
+              <div class="finder-label">Where to look</div>
+              <label class="finder-choice"><input type="radio" name="f-where" value="one" checked onchange="toggleSuburbInput()"> One suburb</label>
+              <label class="finder-choice"><input type="radio" name="f-where" value="km5" onchange="toggleSuburbInput()"> Within 5 km of the Perth CBD</label>
+              <label class="finder-choice"><input type="radio" name="f-where" value="km10" onchange="toggleSuburbInput()"> 5 to 10 km from the Perth CBD</label>
+              <label class="finder-choice"><input type="radio" name="f-where" value="km15" onchange="toggleSuburbInput()"> 10 to 15 km from the Perth CBD</label>
+              <input class="finder-inp" id="f-suburb-custom" placeholder="Leederville" style="margin-top:6px">
             </div>
 
             <div class="finder-field">
@@ -644,7 +642,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
             </div>
 
             <button class="btn btn-cy" onclick="runFinder()" style="width:100%;justify-content:center;margin-top:6px" id="finderRunBtn">&#128270; Run Live Scan</button>
-            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">Every scan looks for commercial premises in the suburb: offices, shops, medical, shopping centres, and similar places. Homes are left out. Neighbouring suburbs are left out. Google still sends at most 5 reviews per business. Check older reviews looks further back for one business. Each check is paid, so the scan does not do it for you.</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.45">One suburb searches only that suburb. The distance choices search suburbs around the Perth CBD, not one big circle. Offices, shops, medical, shopping centres, and similar places. Homes are left out. Places show up as each suburb finishes. Check older reviews is one business at a time.</div>
           </div>
           <div id="finderStatus" class="finder-status"></div>
           <div class="finder-log" id="finderLog" hidden></div>
@@ -1123,6 +1121,11 @@ var finderSuburbOrder = [];
 var finderFold = {suburb:{}, list:{}, place:{}};
 var finderStatusLocked = false;
 var finderScanSuburbName = '';
+var finderPublishedSuburbs = [];
+var finderRingNote = '';
+var finderDraftOpen = {};
+var PERTH_CBD = {lat:-31.9523, lng:115.8613};
+var FINDER_RING_CAP = 12;
 
 // ── MASTER PERTH SUBURB COORDS (120+ suburbs) ─────────────────────────────
 var MASTER_SUBURB_COORDS = {
@@ -1508,17 +1511,13 @@ function cancelFinderKeyEditor(){
 window.addEventListener('pageshow', function(){ loadFinderKey(); });
 loadFinderKey();
 
+function finderWhereMode(){
+  var el = document.querySelector('input[name="f-where"]:checked');
+  return el ? el.value : 'one';
+}
 function toggleSuburbInput(){
-  var mode = document.getElementById('f-suburbs-mode').value;
   var custom = document.getElementById('f-suburb-custom');
-  custom.style.display = mode === 'custom' ? 'block' : 'none';
-  // Warn about full metro scan time
-  var runBtn = document.getElementById('finderRunBtn');
-  if(mode === 'metro_all'){
-    runBtn.title = 'Full Perth Metro scan. This can take a few minutes.';
-  } else {
-    runBtn.title = '';
-  }
+  if(custom) custom.style.display = finderWhereMode() === 'one' ? 'block' : 'none';
 }
 
 function reviewPlainText(rev){
@@ -1792,19 +1791,99 @@ function isKnownSuburb(loc){
   }
   return false;
 }
-function placeInSuburb(vicinity, plusCode, components, suburbName){
-  if(components && components.length) return localityHitsSuburb(localitiesFromComponents(components), suburbName);
-  var fromAddress = addressLocalities(vicinity, suburbName);
-  if(localityHitsSuburb(fromAddress, suburbName)) return true;
-  for(var i = 0; i < fromAddress.length; i++){
-    if(isKnownSuburb(fromAddress[i]) && suburbAliases(suburbName).indexOf(fromAddress[i]) === -1) return false;
+var FINDER_SUBURB_PREFIXES = {west:1, east:1, north:1, south:1, upper:1, lower:1, port:1, mount:1, mt:1, 'new':1, old:1};
+function suburbDisplayName(key){
+  return String(key || '').split(' ').map(function(w){
+    if(w === 'cbd') return 'CBD';
+    if(w === 'mt') return 'Mt';
+    if(!w) return '';
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+function haversineKm(a, b){
+  var R = 6371;
+  var dLat = (b.lat - a.lat) * Math.PI / 180;
+  var dLng = (b.lng - a.lng) * Math.PI / 180;
+  var lat1 = a.lat * Math.PI / 180;
+  var lat2 = b.lat * Math.PI / 180;
+  var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function findTableSuburb(typed){
+  var key = normalizeSuburb(typed);
+  if(!key) return null;
+  function hit(k){
+    var c = MASTER_SUBURB_COORDS[k];
+    if(!c) return null;
+    return {name: suburbDisplayName(k), lat: c.lat, lng: c.lng, key: k};
   }
-  return localityHitsSuburb(addressLocalities(plusCode, suburbName), suburbName);
+  var exact = hit(key);
+  if(exact) return exact;
+  var aliases = suburbAliases(key);
+  for(var i = 0; i < aliases.length; i++){
+    var aliasHit = hit(aliases[i]);
+    if(aliasHit) return aliasHit;
+  }
+  return null;
+}
+function suburbsInRing(minKm, maxKm){
+  var mid = (minKm + maxKm) / 2;
+  var list = [];
+  Object.keys(MASTER_SUBURB_COORDS).forEach(function(key){
+    var c = MASTER_SUBURB_COORDS[key];
+    if(!c || typeof c.lat !== 'number' || typeof c.lng !== 'number') return;
+    var km = haversineKm(PERTH_CBD, c);
+    var inBand = minKm <= 0 ? km <= maxKm : (km > minKm && km <= maxKm);
+    if(!inBand) return;
+    list.push({name: suburbDisplayName(key), lat: c.lat, lng: c.lng, km: km, key: key});
+  });
+  list.sort(function(a, b){
+    var diff = Math.abs(a.km - mid) - Math.abs(b.km - mid);
+    if(diff) return diff;
+    return a.name.localeCompare(b.name);
+  });
+  var total = list.length;
+  var capped = total > FINDER_RING_CAP;
+  if(capped) list = list.slice(0, FINDER_RING_CAP);
+  return {suburbs: list, capped: capped, total: total};
+}
+function mentionsSuburbName(text, suburbName){
+  var target = normalizeSuburb(suburbName);
+  if(!target || !text) return false;
+  var words = normalizeSuburb(String(text).replace(/[,/]/g, ' ')).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  var targetWords = target.split(' ').filter(Boolean);
+  if(!targetWords.length || words.length < targetWords.length) return false;
+  for(var i = 0; i <= words.length - targetWords.length; i++){
+    var ok = true;
+    for(var j = 0; j < targetWords.length; j++){
+      if(words[i + j] !== targetWords[j]){ ok = false; break; }
+    }
+    if(!ok) continue;
+    var prev = i > 0 ? words[i - 1] : '';
+    if(prev && FINDER_SUBURB_PREFIXES[prev]) continue;
+    return true;
+  }
+  return false;
+}
+function placeInSuburb(vicinity, plusCode, components, suburbName, formatted){
+  var chunks = [];
+  function add(t){ if(t) chunks.push(String(t)); }
+  add(formatted);
+  add(vicinity);
+  add(plusCode);
+  (components || []).forEach(function(c){
+    if(!c) return;
+    add(c.long_name);
+    add(c.short_name);
+  });
+  for(var i = 0; i < chunks.length; i++){
+    if(mentionsSuburbName(chunks[i], suburbName)) return true;
+  }
+  return mentionsSuburbName(chunks.join(' '), suburbName);
 }
 function rowInScannedSuburb(row){
   if(!row) return false;
-  if(row.addressComponents && row.addressComponents.length) return placeInSuburb('', '', row.addressComponents, row.suburb);
-  return placeInSuburb(row.address, row.plusCode || '', null, row.suburb);
+  return placeInSuburb(row.address, row.plusCode || '', row.addressComponents, row.suburb, row.formattedAddress || '');
 }
 function finderSearchPlan(type){
   var selected = expandFinderTypes(type);
@@ -1839,10 +1918,13 @@ function finderScanReset(){
 function finderScanUiReset(){
   finderScanReset();
   finderFold = {suburb:{}, list:{}, place:{}};
+  finderPublishedSuburbs = [];
+  finderRingNote = '';
+  finderDraftOpen = {};
   var log = document.getElementById('finderLog');
   if(log) log.innerHTML = '';
   var box = document.getElementById('finderResults');
-  if(box) box.innerHTML = '<div class="empty"><p>Scanning…</p></div>';
+  if(box) box.innerHTML = '';
 }
 function finderScanSuburb(name, index, total){
   if(!name || name === finderScanSuburbName) return;
@@ -1880,88 +1962,62 @@ function runFinder(){
   var minScore = parseInt(document.getElementById('f-minscore').value, 10);
   if(isNaN(minScore)) minScore = 0;
 
-  var mode = document.getElementById('f-suburbs-mode').value;
-  var suburbsToScan;
-  if(mode === 'custom'){
+  var mode = finderWhereMode();
+  var suburbsToScan = null;
+  var ringNote = '';
+  if(mode === 'one'){
     var customVal = document.getElementById('f-suburb-custom').value.trim();
-    if(!customVal){toast('Enter a suburb name','w'); return;}
-    var subKey = customVal.toLowerCase().trim();
-    var coords = MASTER_SUBURB_COORDS[subKey];
-    if(!coords){
-      // Try partial match in the table first
-      var keys = Object.keys(MASTER_SUBURB_COORDS);
-      var match = keys.find(function(k){ return k.indexOf(subKey) !== -1 || subKey.indexOf(k) !== -1; });
-      coords = match ? MASTER_SUBURB_COORDS[match] : null;
-      if(match) finderLog('📍 Matched "' + customVal + '" → "' + match + '" from table.', 'info');
+    if(!customVal){toast('Type a suburb name','w'); return;}
+    var known = findTableSuburb(customVal);
+    if(known){
+      suburbsToScan = [{name: known.name, lat: known.lat, lng: known.lng}];
     } else {
-      finderLog('📍 "' + customVal + '" found in suburb table.', 'info');
-    }
-
-    if(coords){
-      // Fast path: known suburb from table
-      suburbsToScan = [{name: customVal, lat: coords.lat, lng: coords.lng}];
-    } else {
-      // Slow path: geocode the suburb name using the Geocoding API
-      finderLog('🔍 "' + customVal + '" not in local table — looking up coordinates via Geocoding API...', 'info');
       finderScanUiReset();
-      finderStatus('Looking up that suburb…');
+      finderStatus('Looking up ' + customVal + '…');
       var btn2 = document.getElementById('finderRunBtn');
       btn2.innerHTML = '<span class="spin">&#9696;</span> Looking up suburb...';
       btn2.disabled = true;
       var geoUrl = 'https://maps.googleapis.com/maps/api/geocode/json' +
-        '?address=' + encodeURIComponent(customVal + ', Western Australia, Australia') +
+        '?address=' + encodeURIComponent(customVal + ', Perth, Western Australia, Australia') +
         '&key=' + encodeURIComponent(apiKey);
       fetch(geoUrl)
         .then(function(r){ return r.json(); })
         .then(function(data){
           if(data.status === 'OK' && data.results && data.results.length > 0){
             var loc = data.results[0].geometry.location;
-            var resolvedAddr = data.results[0].formatted_address;
-            finderLog('✅ Geocoded: "' + customVal + '" → (' + loc.lat.toFixed(4) + ', ' + loc.lng.toFixed(4) + ')  [' + resolvedAddr + ']', 'ok');
-            // Cache it in the table for this session
-            MASTER_SUBURB_COORDS[subKey] = {lat: loc.lat, lng: loc.lng};
+            finderStatus(customVal + ': searching');
             launchFinder([{name: customVal, lat: loc.lat, lng: loc.lng}],
               type, maxStars, minScore, apiKey, btn2);
           } else {
-            finderLog('❌ Geocoding failed for "' + customVal + '" (status: ' + data.status + '). Check spelling or try a nearby suburb.', 'warn');
             finderStatus('Could not find that suburb. Check the spelling.', true);
             btn2.innerHTML = '&#128270; Run Live Scan';
             btn2.disabled = false;
           }
         })
-        .catch(function(err){
-          finderLog('❌ Geocoding request error: ' + err + '. Check your internet connection.', 'warn');
+        .catch(function(){
           finderStatus('Could not look up that suburb. Check the connection.', true);
           btn2.innerHTML = '&#128270; Run Live Scan';
           btn2.disabled = false;
         });
-      return; // async — launchFinder() called from geocode callback above
+      return;
     }
-  } else if(mode === 'north'){
-    suburbsToScan = ZONE_NORTH_METRO;
-  } else if(mode === 'east'){
-    suburbsToScan = ZONE_EAST_HILLS;
-  } else if(mode === 'south'){
-    suburbsToScan = ZONE_SOUTH_METRO;
-  } else if(mode === 'metro_all'){
-    suburbsToScan = ZONE_FULL_METRO;
-    finderLog('🌏 Full Perth Metro scan: ' + suburbsToScan.length + ' suburbs. This will take 2–3 minutes — please wait.', 'info');
   } else {
-    suburbsToScan = ZONE_INNER_NORTH; // default = inner north
+    var band = mode === 'km5' ? [0, 5] : mode === 'km10' ? [5, 10] : [10, 15];
+    var ring = suburbsInRing(band[0], band[1]);
+    suburbsToScan = ring.suburbs;
+    if(!suburbsToScan.length){ toast('No suburbs in that distance','w'); return; }
+    if(ring.capped) ringNote = 'Showing 12 suburbs in this ring';
   }
 
   var btn = document.getElementById('finderRunBtn');
-
-  // One status line. The detailed log stays hidden.
   finderScanUiReset();
-  if(suburbsToScan && suburbsToScan.length) finderScanSuburb(suburbsToScan[0].name, 0, suburbsToScan.length);
-  finderLog('Starting live Google Places scan...', 'info');
-
-  // Sync path: suburbsToScan already resolved (table hit or zone mode)
-  if(suburbsToScan){
-    launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn);
-  }
-  // Async path: geocoding branch above calls launchFinder() itself then returns
+  finderRingNote = ringNote;
+  finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
+  var startMsg = suburbsToScan[0].name + ': searching';
+  if(suburbsToScan.length > 1) startMsg += ' · 1 of ' + suburbsToScan.length + ' suburbs';
+  if(finderRingNote) startMsg = finderRingNote + '. ' + startMsg;
+  finderStatus(startMsg);
+  launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn);
 }
 
 // ── launchFinder: called once suburbsToScan coords are known ─────────────────
@@ -1971,9 +2027,7 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
   olderReviewBusy = false;
   btn.innerHTML = '<span class="spin">&#9696;</span> Scanning...';
   btn.disabled = true;
-
-  finderLog('Suburbs: ' + suburbsToScan.map(function(s){return s.name;}).join(', '), 'info');
-  if(suburbsToScan.length) finderScanSuburb(suburbsToScan[0].name, 0, suburbsToScan.length);
+  finderSuburbOrder = (suburbsToScan || []).map(function(s){ return s.name; });
 
   var searchPlan = finderSearchPlan(type);
 
@@ -2002,8 +2056,9 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
 function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey, btn){
   var allResults = [];
   var seen = new Set();
+  var gen = finderResultGen;
+  var stopped = false;
 
-  // Create a hidden map div for PlacesService (required by Google)
   var mapDiv = document.getElementById('_finder_map_hidden');
   if(!mapDiv){
     mapDiv = document.createElement('div');
@@ -2011,116 +2066,128 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     mapDiv.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
     document.body.appendChild(mapDiv);
   }
-  var map = new google.maps.Map(mapDiv, {center:{lat:-31.9505,lng:115.8605}, zoom:10});
+  var map = new google.maps.Map(mapDiv, {center:{lat:PERTH_CBD.lat, lng:PERTH_CBD.lng}, zoom:12});
   var service = new google.maps.places.PlacesService(map);
 
-  var total = suburbsToScan.length * searchPlan.length;
-  var done = 0;
+  function suburbPlaceCount(name){
+    var n = 0;
+    for(var i = 0; i < allResults.length; i++){
+      if(allResults[i].suburb === name && allResults[i].inSuburb !== false) n++;
+    }
+    return n;
+  }
+  function progressLine(suburbName, count, doneSubs){
+    var msg = suburbName + ': ' + count + ' place' + (count === 1 ? '' : 's');
+    if(suburbsToScan.length > 1 && doneSubs) msg += ' · ' + doneSubs + ' of ' + suburbsToScan.length + ' suburbs';
+    if(finderRingNote) msg = finderRingNote + '. ' + msg;
+    return msg;
+  }
+  function syncLists(){
+    var quotedIds = {};
+    finderPool.forEach(function(r){ if(r.place_id) quotedIds[r.place_id] = true; });
+    var existingNamesLocal = new Set(leads.map(function(l){ return (l.name || '').toLowerCase().trim(); }));
+    finderPool = finderPool.filter(function(r){
+      return r.inSuburb !== false && rowInScannedSuburb(r) && placeHasPremisesComplaint(r);
+    });
+    var commercial = allResults.filter(function(r){
+      if(r.inSuburb === false || !rowInScannedSuburb(r)) return false;
+      if(r.place_id && quotedIds[r.place_id]) return false;
+      if(placeHasPremisesComplaint(r)) return false;
+      if(existingNamesLocal.has((r.name || '').toLowerCase().trim())) return false;
+      if(finderImported[r.name]) return false;
+      return isCommercialProspect(r);
+    });
+    commercial.sort(function(a, b){
+      var diff = (b.reviews || 0) - (a.reviews || 0);
+      if(diff) return diff;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+    finderCommercial = commercial;
+    finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
+  }
+  function paint(msg){
+    if(gen !== finderResultGen) return;
+    syncLists();
+    if(msg) finderStatus(msg);
+    renderFinderResults(finderPool, finderCommercial);
+  }
+  function publishSuburb(name){
+    if(finderPublishedSuburbs.indexOf(name) === -1) finderPublishedSuburbs.push(name);
+  }
+  function halt(msg){
+    stopped = true;
+    finderStatus(msg, true);
+    btn.innerHTML = '&#128270; Run Live Scan';
+    btn.disabled = false;
+  }
 
-  finderLog('Scanning ' + suburbsToScan.length + ' suburb(s) × ' + searchPlan.length + ' commercial type(s) = ' + total + ' searches. Only commercial premises with an address in each suburb are kept. Homes are left out.', 'info');
+  function finishScan(){
+    if(gen !== finderResultGen) return;
+    finderPool = finderPool.filter(function(r){
+      return r.inSuburb !== false && rowInScannedSuburb(r) && placeHasPremisesComplaint(r) && (!minScore || (r.score || 0) >= minScore);
+    });
+    finderPool.sort(function(a, b){ return (b.score || 0) - (a.score || 0); });
+    syncLists();
+    var msg = 'Finished. ' + finderPool.length + ' cleanliness complaint' + (finderPool.length === 1 ? '' : 's') + ', ' + finderCommercial.length + ' place' + (finderCommercial.length === 1 ? '' : 's') + ' to contact.';
+    if(finderRingNote) msg = finderRingNote + '. ' + msg;
+    finderStatus(msg);
+    btn.innerHTML = '&#128270; Run Live Scan';
+    btn.disabled = false;
+    renderFinderResults(finderPool, finderCommercial);
+  }
 
-  function onAllDone(){
-    var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
-    var dupes = allResults.filter(function(r){
-      return existingNamesLocal.has(r.name.toLowerCase().trim());
-    }).length;
+  function startReviews(){
+    if(stopped || gen !== finderResultGen) return;
+    var existingNamesLocal = new Set(leads.map(function(l){ return (l.name || '').toLowerCase().trim(); }));
     var candidates = allResults.filter(function(r){
       if(!r.inCleanlinessSearch || r.inSuburb === false || !rowInScannedSuburb(r)) return false;
-      if(existingNamesLocal.has(r.name.toLowerCase().trim())) return false;
+      if(existingNamesLocal.has((r.name || '').toLowerCase().trim())) return false;
       if(typeof r.stars !== 'number') return false;
       if(!isNaN(maxStars) && r.stars > maxStars) return false;
       return true;
     });
-    candidates.sort(function(a,b){
+    candidates.sort(function(a, b){
       if(a.stars !== b.stars) return a.stars - b.stars;
-      return (b.reviews||0) - (a.reviews||0);
+      return (b.reviews || 0) - (a.reviews || 0);
     });
-    var skipped = 0;
-    if(candidates.length > FINDER_REVIEW_CAP){
-      skipped = candidates.length - FINDER_REVIEW_CAP;
-      candidates = candidates.slice(0, FINDER_REVIEW_CAP);
-    }
-    finderStatus(candidates.length ? 'Reading reviews…' : 'Finishing the scan…');
-    finderLog('Nearby search done. ' + allResults.length + ' commercial places. ' + dupes + ' already in your leads (skipped). Reading review text for ' + candidates.length + ' lowest-rated places.' + (skipped ? ' ' + skipped + ' not checked this run — scan a smaller area to cover them.' : ''), 'info');
-    finderLog('Google Places returns at most 5 reviews per business, chosen by relevance. This scan uses only those five. Check older reviews on one business to look further back. That check is paid and is not run for the whole suburb.', 'info');
-    readFinderReviews(candidates);
-  }
-
-  function readFinderReviews(candidates){
-    var kept = [];
+    if(candidates.length > FINDER_REVIEW_CAP) candidates = candidates.slice(0, FINDER_REVIEW_CAP);
+    if(!candidates.length){ finishScan(); return; }
     var index = 0;
     var checked = 0;
-    var noText = 0;
-    var box = document.getElementById('finderResults');
-    function showProgress(){
-      if(!box) return;
-      finderStatus('Reading reviews… ' + checked + ' of ' + candidates.length);
-      box.innerHTML = '<div class="empty"><p>Reading reviews… ' + checked + ' of ' + candidates.length + '.</p></div>';
+    function reviewMsg(){
+      var msg = 'Reading reviews · ' + checked + ' of ' + candidates.length;
+      if(finderRingNote) msg = finderRingNote + '. ' + msg;
+      return msg;
     }
-    function finish(){
-      var quoted = kept.slice();
-      if(minScore){
-        kept = kept.filter(function(r){ return (r.score||0) >= minScore; });
-      }
-      var belowScore = quoted.length - kept.length;
-      kept = kept.filter(function(r){ return r.inSuburb !== false && rowInScannedSuburb(r); });
-      kept.sort(function(a,b){ return (b.score||0) - (a.score||0); });
-      finderPool = kept;
-      var quotedIds = {};
-      quoted.forEach(function(r){ if(r.place_id) quotedIds[r.place_id] = true; });
-      var existingNamesLocal = new Set(leads.map(function(l){return l.name.toLowerCase().trim();}));
-      var commercial = allResults.filter(function(r){
-        if(r.inSuburb === false || !rowInScannedSuburb(r)) return false;
-        if(r.place_id && quotedIds[r.place_id]) return false;
-        if(existingNamesLocal.has((r.name||'').toLowerCase().trim())) return false;
-        if(finderImported[r.name]) return false;
-        return isCommercialProspect(r);
-      });
-      commercial.sort(function(a,b){
-        var diff = (b.reviews||0) - (a.reviews||0);
-        if(diff) return diff;
-        return String(a.name||'').localeCompare(String(b.name||''));
-      });
-      var commercialHidden = 0;
-      if(commercial.length > FINDER_COMMERCIAL_CAP){
-        commercialHidden = commercial.length - FINDER_COMMERCIAL_CAP;
-        commercial = commercial.slice(0, FINDER_COMMERCIAL_CAP);
-      }
-      finderCommercial = commercial;
-      finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
-      finderStatus('Finished. ' + kept.length + ' cleanliness complaint' + (kept.length===1?'':'s') + ', ' + commercial.length + ' place' + (commercial.length===1?'':'s') + ' to contact.');
-      finderLog('Review check done. ' + checked + ' read. ' + kept.length + ' mention a cleanliness or hygiene problem. ' + noText + ' had no review text.', 'ok');
-      if(belowScore) finderLog(belowScore + ' cleanliness matches were under the minimum score, so they are not listed.', 'info');
-      finderLog(commercial.length + ' commercial places listed for outreach' + (commercialHidden ? ' (' + commercialHidden + ' more not shown — scan a smaller area).' : '') + '. No cleanliness email for these.', 'info');
-      btn.innerHTML = '&#128270; Run Live Scan';
-      btn.disabled = false;
-      renderFinderResults(kept, commercial);
-    }
+    finderStatus(reviewMsg());
     function nextDetail(){
-      if(index >= candidates.length){ finish(); return; }
+      if(stopped || gen !== finderResultGen) return;
+      if(index >= candidates.length){ finishScan(); return; }
       var place = candidates[index++];
       var attempt = 0;
       function request(){
+        if(stopped || gen !== finderResultGen) return;
         service.getDetails({
           placeId: place.place_id,
           fields: ['reviews', 'address_components', 'formatted_address']
         }, function(detail, status){
+          if(gen !== finderResultGen) return;
           var OK = google.maps.places.PlacesServiceStatus.OK;
           var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
           if(status === LIMIT && attempt < 2){
             attempt++;
-            finderLog('Rate limit — waiting, then retrying ' + place.name, 'warn');
             setTimeout(request, 1500 * attempt);
             return;
           }
+          var hitAdded = false;
           if(status === OK) place.reviewsRead = true;
           if(status === OK && detail){
             if(detail.address_components) place.addressComponents = detail.address_components;
-            if(detail.formatted_address) place.address = detail.formatted_address;
-            if(place.addressComponents && !placeInSuburb('', '', place.addressComponents, place.suburb)){
-              place.inSuburb = false;
-              finderLog(place.name + ' address is not in ' + place.suburb + ' — left off both lists.', 'info');
+            if(detail.formatted_address){
+              place.address = detail.formatted_address;
+              place.formattedAddress = detail.formatted_address;
             }
+            if(!rowInScannedSuburb(place)) place.inSuburb = false;
           }
           checked++;
           if(place.inSuburb !== false && status === OK && detail && detail.reviews && detail.reviews.length){
@@ -2130,65 +2197,48 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
               place.reviewAuthor = hit.author || '';
               place.reviewStars = hit.rating;
               place.reviewWhen = hit.when || '';
-              kept.push(place);
-              finderLog('Kept ' + place.name + ' — "' + hit.quote.slice(0, 90) + '"', 'ok');
+              if(placeHasPremisesComplaint(place) && (!minScore || (place.score || 0) >= minScore)){
+                var already = false;
+                for(var pi = 0; pi < finderPool.length; pi++){
+                  if(finderPool[pi] === place || (place.place_id && finderPool[pi].place_id === place.place_id)){ already = true; break; }
+                }
+                if(!already) finderPool.push(place);
+                hitAdded = true;
+              }
             }
-          } else if(status === OK){
-            noText++;
-          } else if(status !== LIMIT){
-            finderLog('Could not read reviews for ' + place.name + ': ' + status, 'warn');
           }
-          if(checked % 5 === 0 || checked === candidates.length) showProgress();
+          finderStatus(reviewMsg());
+          if(hitAdded) paint(reviewMsg());
           setTimeout(nextDetail, 220);
         });
       }
       request();
     }
-    if(!candidates.length){
-      finderLog(allResults.length ? 'No rated places to read reviews for. Commercial places are still listed below.' : 'No new places to check.', 'warn');
-      finish();
-      return;
-    }
-    showProgress();
     nextDetail();
   }
 
-  function searchOne(suburb, type, forCleanliness){
-    var suburbAt = 0;
-    for(var si=0; si<suburbsToScan.length; si++){ if(suburbsToScan[si].name === suburb.name){ suburbAt = si; break; } }
-    finderScanSuburb(suburb.name, suburbAt, suburbsToScan.length);
+  function searchOne(suburb, type, forCleanliness, cb){
     var loc = new google.maps.LatLng(suburb.lat, suburb.lng);
     var request = {location: loc, radius: FINDER_SUBURB_RADIUS, type: type};
     var pages = 0;
     var attempt = 0;
-    var nearbyCount = 0;
-    var keptCount = 0;
-    var outsideCount = 0;
-    function finishSearch(){
-      finderLog(suburb.name + ' / ' + type + ': ' + nearbyCount + ' nearby, ' + keptCount + ' with a ' + suburb.name + ' address.' + (outsideCount ? ' ' + outsideCount + ' in other suburbs left out.' : ''), 'info');
-      done++;
-      if(done >= total) onAllDone();
-    }
+    function doneStep(){ if(cb) cb(); }
     function onPage(results, status, pagination){
+      if(stopped || gen !== finderResultGen) return;
       var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
       if(status === LIMIT && attempt < 2 && pages === 0){
         attempt++;
-        finderLog('Rate limit — waiting, then retrying ' + suburb.name + ' / ' + type, 'warn');
         setTimeout(function(){ service.nearbySearch(request, onPage); }, 1500 * attempt);
         return;
       }
       pages++;
       if(status === google.maps.places.PlacesServiceStatus.OK && results){
-        nearbyCount += results.length;
         results.forEach(function(place){
           if(!place.place_id || seen.has(place.place_id)) return;
           seen.add(place.place_id);
           var plus = (place.plus_code && place.plus_code.compound_code) || '';
           var vicinity = place.vicinity || '';
-          if(!placeInSuburb(vicinity, plus, null, suburb.name)){
-            outsideCount++;
-            return;
-          }
+          if(!placeInSuburb(vicinity, plus, null, suburb.name)) return;
           var rated = typeof place.rating === 'number' && place.rating > 0;
           var row = {
             place_id: place.place_id,
@@ -2207,35 +2257,49 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
             inCleanlinessSearch: !!forCleanliness
           };
           if(!isCommercialProspect(row)) return;
-          keptCount++;
           allResults.push(row);
         });
-        if(suburbsToScan.length <= 3 && pagination && pagination.hasNextPage && pages < 3 && outsideCount > 0){
+        if(suburbsToScan.length <= 3 && pagination && pagination.hasNextPage && pages < 3){
           setTimeout(function(){ pagination.nextPage(); }, 2000);
           return;
         }
       } else if(status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED){
-        finderStatus('Google refused the scan. Check that Places is turned on for this key.', true);
-        finderLog('REQUEST_DENIED for ' + suburb.name + ' — Fix: (1) Go to console.cloud.google.com → APIs & Services → Enable "Places API" AND "Maps JavaScript API". (2) Ensure billing is active. (3) Under API Key restrictions set Application restrictions to None (for local file use).', 'warn');
-      } else if(status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS && status !== google.maps.places.PlacesServiceStatus.OK){
-        finderLog('Error for ' + suburb.name + ': ' + status, 'warn');
+        halt('Google refused the scan. Check that Places is turned on for this key.');
+        return;
       }
-      finishSearch();
+      doneStep();
     }
     service.nearbySearch(request, onPage);
   }
 
-  var searchIdx = 0;
-  suburbsToScan.forEach(function(suburb){
-    searchPlan.forEach(function(step){
-      (function(delay){
-        setTimeout(function(){
-          searchOne(suburb, step.type, step.forCleanliness);
-        }, delay);
-      })(searchIdx * 300);
-      searchIdx++;
-    });
-  });
+  var suburbPos = 0;
+  function runSuburb(){
+    if(stopped || gen !== finderResultGen) return;
+    if(suburbPos >= suburbsToScan.length){ startReviews(); return; }
+    var suburb = suburbsToScan[suburbPos];
+    var stepPos = 0;
+    function afterStep(){
+      if(stopped || gen !== finderResultGen) return;
+      var n = suburbPlaceCount(suburb.name);
+      if(n){
+        publishSuburb(suburb.name);
+        paint(progressLine(suburb.name, n, 0));
+      }
+      if(stepPos >= searchPlan.length){
+        publishSuburb(suburb.name);
+        suburbPos++;
+        paint(progressLine(suburb.name, n, suburbPos));
+        runSuburb();
+        return;
+      }
+      var step = searchPlan[stepPos++];
+      searchOne(suburb, step.type, step.forCleanliness, afterStep);
+    }
+    afterStep();
+  }
+  finderPool = [];
+  finderCommercial = [];
+  runSuburb();
 }
 
 function isGooglePlaceId(id){
@@ -2305,9 +2369,6 @@ function olderReviewsControl(listName, idx, place){
   if(note){
     var color = state === 'error' ? 'var(--lost)' : state === 'hit' ? 'var(--cyd)' : 'var(--t2)';
     html += '<div class="older-review-note" style="margin-top:8px;font-size:12px;line-height:1.45;color:'+color+'">'+e(note)+'</div>';
-  }
-  if(state === 'hit' && place.olderReviewLeadId){
-    html += '<button type="button" class="btn btn-cy btn-sm" style="margin-top:8px" onclick="openTmplForLead('+Number(place.olderReviewLeadId)+')">Open draft email</button>';
   }
   if(state === 'hit' || state === 'miss') return html;
   var busy = state === 'loading';
@@ -2380,7 +2441,7 @@ function checkOlderReviews(listName, idx, ev){
         ? 'Older reviews include a cleanliness complaint. The draft email quotes that sentence.'
         : (wasComplaint
           ? 'Older reviews include a cleanliness complaint. The quote above is the one the draft email uses.'
-          : 'Older reviews include a cleanliness complaint. This is now a cleanliness lead. Import and draft email quotes that sentence.');
+          : 'Older reviews include a cleanliness complaint. This is now a cleanliness lead. Draft email quotes that sentence.');
       finderLog('Older reviews kept ' + place.name + ' — "' + quote.slice(0, 90) + '"', 'ok');
       toast(place.name + ' is now a cleanliness lead', 's');
       revealFinderPlace(place, 'clean');
@@ -2442,6 +2503,104 @@ function finderSection(group, key, title, countText, bodyHtml, accent){
     + '<div id="fs-' + group + '-' + key + '" style="display:' + (open ? 'block' : 'none') + ';padding:0 10px 10px">' + bodyHtml + '</div>'
     + '</div>';
 }
+function plainPlaceKind(type){
+  var t = String(type || '').toLowerCase();
+  if(t.indexOf('shopping') >= 0) return 'shopping centre';
+  if(t.indexOf('medical') >= 0) return 'medical place';
+  if(t.indexOf('retail') >= 0 || t.indexOf('shop') >= 0) return 'shop';
+  if(t.indexOf('government') >= 0) return 'government office';
+  if(t.indexOf('strata') >= 0) return 'strata office';
+  if(t.indexOf('office') >= 0) return 'office';
+  return 'commercial place';
+}
+function placeKindPhrase(kind){
+  if(kind === 'office') return 'an office';
+  return 'a ' + kind;
+}
+function whyThisPlace(kind, suburb){
+  if(kind === 'shop') return 'A shop in ' + suburb + ' is judged in the first few steps. People feel the floor and the bathroom before they buy anything. That is about the place feeling right, not about it looking shiny.';
+  if(kind === 'medical place') return 'A medical place in ' + suburb + ' is where people are already uneasy. The bathroom and the waiting room are what they remember. It says whether the practice cares about them.';
+  if(kind === 'shopping centre') return 'A shopping centre in ' + suburb + ' puts a lot of people through the same toilets and food areas. Those rooms are the visit. It is not about the floors looking shiny.';
+  if(kind === 'office') return 'An office in ' + suburb + ' is where people have to work all day. A clean workspace says the business cares about its people and its clients. It is about feeling right and being able to work, not about looking shiny.';
+  if(kind === 'government office') return 'A government office in ' + suburb + ' is full of people who have to be there. The bathrooms and waiting areas are the visit. It is about the place feeling right, not about it looking shiny.';
+  if(kind === 'strata office') return 'A strata office in ' + suburb + ' is where owners and tenants sort out the building. The rooms they use are the building. That is about people being able to work, not about looking shiny.';
+  return 'A ' + kind + ' in ' + suburb + ' is judged on the rooms customers and staff actually use. Cleanliness is about people being able to work, not about looking shiny.';
+}
+function draftFinderEmail(place){
+  var name = (place && place.name) || 'this business';
+  var suburb = (place && place.suburb) || 'the suburb';
+  var kind = plainPlaceKind(place && place.type);
+  var quote = '';
+  if(place && placeHasPremisesComplaint(place)){
+    quote = String(place.issue).replace(/^["“”']+|["“”']+$/g, '').trim();
+  }
+  var lines = [];
+  lines.push('Hi,');
+  lines.push('');
+  lines.push('I looked at ' + name + '. It is ' + placeKindPhrase(kind) + ' in ' + suburb + '.');
+  lines.push('');
+  if(quote){
+    lines.push('This is on the Google reviews:');
+    lines.push('');
+    lines.push('"' + quote + '"');
+    lines.push('');
+  } else {
+    lines.push('I did not find a cleanliness complaint in the reviews I read. I am not going to invent one.');
+    lines.push('');
+  }
+  lines.push(whyThisPlace(kind, suburb));
+  lines.push('');
+  lines.push('I do not compete on price. Trust is everything. I do not make promises. I provide proof. I am not the cleaner who shows up, takes a lap, and takes the cash. I want to be a cleaning partner that actually gives a damn. Every week. Every visit. No shortcuts.');
+  lines.push('');
+  lines.push('From Dust To Trust');
+  lines.push('https://www.bigbluemop.com.au');
+  lines.push('See the work: https://www.instagram.com/big_blue_mop/');
+  lines.push('');
+  lines.push('Alex');
+  lines.push('Big Blue Mop');
+  lines.push('0410 260 800');
+  lines.push('bigbluemop@gmail.com');
+  return {subject: name + ' in ' + suburb, body: lines.join('\n')};
+}
+function draftBoxHtml(listName, idx, place){
+  var open = !!(place && place.place_id && finderDraftOpen[place.place_id]);
+  var inner = '';
+  if(open){
+    var draft = draftFinderEmail(place);
+    var text = 'Subject: ' + draft.subject + '\n\n' + draft.body;
+    inner = '<div style="margin-top:8px;font-size:12px;font-weight:800;color:var(--tx)">Draft email. Copy it. Nothing is sent.</div>'
+      + '<pre id="draft-text-' + listName + '-' + idx + '" style="white-space:pre-wrap;font-family:var(--f);font-size:12px;line-height:1.45;color:var(--t2);background:var(--s2);border-radius:8px;padding:10px;margin:8px 0">' + e(text) + '</pre>'
+      + '<button type="button" class="btn btn-cy btn-sm" onclick="copyFinderDraft(\'' + listName + '\',' + idx + ',event)">Copy</button>';
+  }
+  return '<div id="draft-' + listName + '-' + idx + '" style="display:' + (open ? 'block' : 'none') + '">' + inner + '</div>'
+    + '<button type="button" class="btn btn-cy btn-sm" style="margin-top:8px" onclick="showFinderDraft(\'' + listName + '\',' + idx + ',event)">Draft email</button>';
+}
+function showFinderDraft(listName, idx, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  var list = listName === 'commercial' ? finderCommercial : finderPool;
+  var place = list[idx];
+  if(!place) return;
+  if(place.place_id) finderDraftOpen[place.place_id] = true;
+  var box = document.getElementById('draft-' + listName + '-' + idx);
+  if(!box) return;
+  var draft = draftFinderEmail(place);
+  var text = 'Subject: ' + draft.subject + '\n\n' + draft.body;
+  box.style.display = 'block';
+  box.innerHTML = '<div style="margin-top:8px;font-size:12px;font-weight:800;color:var(--tx)">Draft email. Copy it. Nothing is sent.</div>'
+    + '<pre id="draft-text-' + listName + '-' + idx + '" style="white-space:pre-wrap;font-family:var(--f);font-size:12px;line-height:1.45;color:var(--t2);background:var(--s2);border-radius:8px;padding:10px;margin:8px 0">' + e(text) + '</pre>'
+    + '<button type="button" class="btn btn-cy btn-sm" onclick="copyFinderDraft(\'' + listName + '\',' + idx + ',event)">Copy</button>';
+}
+function copyFinderDraft(listName, idx, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  var pre = document.getElementById('draft-text-' + listName + '-' + idx);
+  var text = pre ? pre.textContent : '';
+  if(!text){ toast('Nothing to copy','w'); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast('Copied','s'); }).catch(function(){ toast('Copy failed','w'); });
+  } else {
+    toast('Copy failed','w');
+  }
+}
 function cleanlinessCard(r, idx, existingNamesLocal){
   var scoreColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#888';
   var borderColor = r.score>=80 ? '#E84040' : r.score>=70 ? '#F5A623' : r.score>=60 ? '#3EC6F0' : '#E84040';
@@ -2480,8 +2639,8 @@ function cleanlinessCard(r, idx, existingNamesLocal){
     + '</div>'
     + (imported
       ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
-      : '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-cy btn-sm" id="frbtn-'+idx+'" onclick="importFinder('+idx+',true)" style="flex:1;justify-content:center">Import and draft email</button><button class="btn btn-gh btn-sm" onclick="importFinder('+idx+',false)">Import only</button></div>'
-    )
+      : '<button class="btn btn-gh btn-sm" id="frbtn-'+idx+'" onclick="importFinder('+idx+',false)" style="margin-top:8px">Import only</button>')
+    + draftBoxHtml('clean', idx, r)
     + '</div></div></div>';
 }
 function commercialCard(r, idx, existingNamesLocal){
@@ -2514,8 +2673,8 @@ function commercialCard(r, idx, existingNamesLocal){
     + '</div>'
     + (imported
       ? '<div style="color:#22B573;font-size:12px;font-weight:800;padding:6px 0">✓ Already in your leads database</div>'
-      : '<button class="btn btn-gh btn-sm" id="frxbtn-'+idx+'" onclick="importCommercial('+idx+')" style="width:100%;justify-content:center">Import</button>'
-    )
+      : '<button class="btn btn-gh btn-sm" id="frxbtn-'+idx+'" onclick="importCommercial('+idx+')" style="width:100%;justify-content:center">Import</button>')
+    + draftBoxHtml('commercial', idx, r)
     + '</div></div></div>';
 }
 function renderFinderResults(results, commercial){
@@ -2524,7 +2683,7 @@ function renderFinderResults(results, commercial){
   var container = document.getElementById('finderResults');
   if(!container) return;
   var existingNamesLocal = new Set(leads.map(function(l){return (l.name||'').toLowerCase().trim();}));
-  if(!results.length && !commercial.length){
+  if(!results.length && !commercial.length && !(finderPublishedSuburbs && finderPublishedSuburbs.length)){
     container.innerHTML = '<div class="empty"><div class="ei">&#128269;</div><p>No commercial places in this scan. When a business is listed, open its suburb, then Check older reviews on that one business.</p></div>';
     return;
   }
@@ -2538,6 +2697,7 @@ function renderFinderResults(results, commercial){
     }
     return buckets[key];
   }
+  (finderPublishedSuburbs || []).forEach(function(name){ bucket(name); });
   results.forEach(function(r, idx){ bucket(r.suburb).clean.push({r:r, idx:idx}); });
   commercial.forEach(function(r, idx){ bucket(r.suburb).commercial.push({r:r, idx:idx}); });
   var rank = {};
@@ -2664,7 +2824,6 @@ function importFinder(idx, draft){
   }
   usb();
   toast(r.name + ' added with the review quote', 's');
-  if(draft) openTmplForLead(newLead.id);
 }
 
 function importAllFinder(){
@@ -3043,7 +3202,7 @@ function od2(id){
     "</div>";
   document.getElementById("da").innerHTML=
     '<button class="btn btn-cy btn-sm" onclick="oEdit('+id+')">Edit All</button>'+
-    '<button class="btn btn-gh btn-sm" onclick="openTmplForLead('+id+')">Templates</button>'+((!l.e1)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',1)">&#9993; Email 1 Sent</button>':'')+((l.e1&&edone(l)<2)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',2)">&#9993; Email 2 Sent</button>':'')+((l.e1&&edone(l)>=2&&edone(l)<3)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',3)">&#9993; Email 3 Sent</button>':'')+((l.e1&&edone(l)>=3&&edone(l)<4)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',4)">&#9993; Email 4 Sent</button>':'')+
+    ''+((!l.e1)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',1)">&#9993; Email 1 Sent</button>':'')+((l.e1&&edone(l)<2)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',2)">&#9993; Email 2 Sent</button>':'')+((l.e1&&edone(l)>=2&&edone(l)<3)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',3)">&#9993; Email 3 Sent</button>':'')+((l.e1&&edone(l)>=3&&edone(l)<4)?'<button class="btn btn-gh btn-sm" onclick="markEmailSent('+id+',4)">&#9993; Email 4 Sent</button>':'')+
     (l.phone?'<a class="btn btn-gh btn-sm" href="tel:'+l.phone+'">Call</a>':"")+
     (l.email?'<a class="btn btn-gh btn-sm" href="mailto:'+l.email+'">Email</a>':"")+
     (l.address?'<a class="btn btn-gh btn-sm" href="https://maps.google.com/?q='+encodeURIComponent(l.address+" WA")+'" target="_blank">Maps</a>':"")+
@@ -3213,8 +3372,7 @@ var TMPLS=[
 
 /* ── lead-aware template helpers ── */
 function openTmplForLead(id){
-  tmplLead=leads.find(function(x){return x.id===id;})||null;
-  cdp();go("templates");
+  toast('Open the business in Lead Finder and tap Draft email.','w');
 }
 
 function starsSVG(rating){
