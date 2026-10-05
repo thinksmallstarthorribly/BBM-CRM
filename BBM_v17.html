@@ -262,6 +262,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .finder-inp:focus{border-color:var(--cy)}
 .finder-sel{background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--tx);font-family:var(--f);outline:none;width:100%}
 .finder-log{display:none}
+#_finder_map_hidden{position:fixed!important;left:-9999px!important;top:0!important;width:400px;height:400px;overflow:hidden!important;pointer-events:none}
 .finder-status{font-size:13px;font-weight:800;color:var(--tx);line-height:1.4;margin-top:8px}
 .finder-sec{background:var(--s1);border:1.5px solid var(--bd);border-radius:12px;margin-bottom:8px}
 .finder-sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;cursor:pointer}
@@ -1696,15 +1697,15 @@ function finderMapType(types){
 var FINDER_HOME_TYPES = {premise:1,subpremise:1,street_address:1,route:1,locality:1,neighborhood:1,political:1,postal_code:1,plus_code:1,intersection:1,colloquial_area:1,floor:1,room:1,geocode:1};
 function isCommercialProspect(row){
   var types = (row && row.rawTypes) || [];
+  if(!types.length) return true;
   var commercialHit = false;
   var homeish = false;
   for(var i=0;i<types.length;i++){
     if(FINDER_HOME_TYPES[types[i]]) homeish = true;
-    else if(types[i] !== 'point_of_interest') commercialHit = true;
+    else if(types[i] !== 'point_of_interest' && types[i] !== 'establishment') commercialHit = true;
   }
   if(homeish && !commercialHit) return false;
-  if(commercialHit) return true;
-  return false;
+  return true;
 }
 function expandFinderTypes(type){
   if(type === 'all') return ['shopping_mall','store','doctor','dentist','hospital','local_government_office','real_estate_agency','accounting','lawyer','insurance_agency'];
@@ -1892,7 +1893,26 @@ function mentionsSuburbName(text, suburbName){
   }
   return false;
 }
-function placeInSuburb(vicinity, plusCode, components, suburbName, formatted){
+function suburbMentionKind(text, suburbName){
+  var target = normalizeSuburb(suburbName);
+  if(!target || !text) return '';
+  var words = normalizeSuburb(String(text).replace(/[,/]/g, ' ')).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  var targetWords = target.split(' ').filter(Boolean);
+  if(!targetWords.length || words.length < targetWords.length) return '';
+  var kind = '';
+  for(var i = 0; i <= words.length - targetWords.length; i++){
+    var ok = true;
+    for(var j = 0; j < targetWords.length; j++){
+      if(words[i + j] !== targetWords[j]){ ok = false; break; }
+    }
+    if(!ok) continue;
+    var prev = i > 0 ? words[i - 1] : '';
+    if(prev && FINDER_SUBURB_PREFIXES[prev]) kind = kind || 'prefixed';
+    else return 'exact';
+  }
+  return kind;
+}
+function finderTextBlob(vicinity, plusCode, components, formatted){
   var chunks = [];
   function add(t){ if(t) chunks.push(String(t)); }
   add(formatted);
@@ -1900,17 +1920,31 @@ function placeInSuburb(vicinity, plusCode, components, suburbName, formatted){
   add(plusCode);
   (components || []).forEach(function(c){
     if(!c) return;
-    add(c.long_name);
-    add(c.short_name);
+    add(c.long_name || c.longText);
+    add(c.short_name || c.shortText);
   });
-  for(var i = 0; i < chunks.length; i++){
-    if(mentionsSuburbName(chunks[i], suburbName)) return true;
+  return chunks.join(' ');
+}
+function placeKeptForScan(vicinity, plusCode, components, suburbName, formatted){
+  var blob = finderTextBlob(vicinity, plusCode, components, formatted);
+  if(!normalizeSuburb(blob)) return true;
+  var own = suburbMentionKind(blob, suburbName);
+  if(own === 'exact') return true;
+  if(own === 'prefixed') return false;
+  var target = normalizeSuburb(suburbName);
+  var keys = Object.keys(MASTER_SUBURB_COORDS);
+  for(var i = 0; i < keys.length; i++){
+    if(keys[i] === target || keys[i] === 'perth') continue;
+    if(suburbMentionKind(blob, keys[i]) === 'exact') return false;
   }
-  return mentionsSuburbName(chunks.join(' '), suburbName);
+  return true;
+}
+function placeInSuburb(vicinity, plusCode, components, suburbName, formatted){
+  return placeKeptForScan(vicinity, plusCode, components, suburbName, formatted);
 }
 function rowInScannedSuburb(row){
-  if(!row) return false;
-  return placeInSuburb(row.address, row.plusCode || '', row.addressComponents, row.suburb, row.formattedAddress || '');
+  if(!row || row.inSuburb === false) return false;
+  return placeKeptForScan(row.address, row.plusCode || '', row.addressComponents, row.suburb, row.formattedAddress || '');
 }
 function finderSearchPlan(type){
   var selected = expandFinderTypes(type);
@@ -2000,6 +2034,34 @@ function runFinder(){
   launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn);
 }
 
+function withFinderPlaces(apiKey, fn, onErr){
+  function start(){
+    var importer = google.maps && google.maps.importLibrary;
+    if(typeof importer === 'function'){
+      importer('places').then(function(lib){ fn(lib || (google.maps && google.maps.places) || {}); }).catch(function(){
+        fn((google.maps && google.maps.places) || {});
+      });
+      return;
+    }
+    fn((google.maps && google.maps.places) || {});
+  }
+  if(typeof google !== 'undefined' && google.maps && (google.maps.places || google.maps.importLibrary)){
+    start();
+    return;
+  }
+  window._finderCallback = function(){ start(); };
+  var script = document.createElement('script');
+  script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(apiKey) + '&v=weekly&libraries=places&callback=_finderCallback';
+  script.onerror = onErr;
+  document.head.appendChild(script);
+}
+function finderPlaceNamespace(lib){
+  if(lib && lib.Place && typeof lib.Place.searchNearby === 'function') return lib;
+  var places = google.maps && google.maps.places;
+  if(places && places.Place && typeof places.Place.searchNearby === 'function') return places;
+  return null;
+}
+
 // ── launchFinder: called once suburbsToScan coords are known ─────────────────
 function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
   finderResultGen++;
@@ -2009,53 +2071,66 @@ function launchFinder(suburbsToScan, type, maxStars, minScore, apiKey, btn){
   btn.disabled = true;
   finderSuburbOrder = (suburbsToScan || []).map(function(s){ return s.name; });
 
-  var searchPlan = finderSearchPlan(type);
-
-  // Load Maps JS API if not already loaded
-  if(typeof google === 'undefined' || !google.maps || !google.maps.places){
-    finderLog('Loading Google Maps Places library...', 'info');
-    window._finderCallback = function(){
-      finderLog('Maps library ready. Starting scan...', 'ok');
-      runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey, btn);
-    };
-    var script = document.createElement('script');
-    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + apiKey + '&libraries=places&callback=_finderCallback';
-    script.onerror = function(){
-      finderLog('ERROR: Could not load Maps API. Check your key is valid and has no HTTP restrictions.', 'warn');
-      finderStatus('Could not load Google Maps. Check the API key.', true);
-      btn.innerHTML = '&#128270; Run Live Scan';
-      btn.disabled = false;
-    };
-    document.head.appendChild(script);
-  } else {
-    finderLog('Maps library already loaded. Starting scan...', 'ok');
-    runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey, btn);
-  }
+  withFinderPlaces(apiKey, function(lib){
+    runFinderWithMaps(suburbsToScan, lib, maxStars, minScore, apiKey, btn);
+  }, function(){
+    finderStatus('Could not load Google Maps. Check the API key.', true);
+    btn.innerHTML = '&#128270; Run Live Scan';
+    btn.disabled = false;
+  });
 }
 
-function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey, btn){
+function finderPlaceId(raw){
+  var id = raw == null ? '' : String(raw);
+  if(id.indexOf('places/') === 0) id = id.slice(7);
+  return id;
+}
+function finderPlaceName(place){
+  if(!place) return '';
+  if(place.displayName && typeof place.displayName.text === 'string') return place.displayName.text;
+  if(typeof place.displayName === 'string') return place.displayName;
+  return place.name || '';
+}
+function finderRowFromPlace(place, suburb){
+  if(!place) return null;
+  var formatted = place.formattedAddress || place.formatted_address || '';
+  var vicinity = place.vicinity || '';
+  var components = place.addressComponents || place.address_components || null;
+  var types = place.types || [];
+  var id = finderPlaceId(place.id || place.place_id);
+  var rated = typeof place.rating === 'number' && place.rating > 0;
+  var reviews = place.userRatingCount || place.user_ratings_total || 0;
+  var row = {
+    place_id: id,
+    name: finderPlaceName(place) || 'Business',
+    suburb: suburb.name,
+    type: finderMapType(types),
+    rawTypes: types,
+    address: formatted || vicinity,
+    formattedAddress: formatted,
+    plusCode: (place.plus_code && place.plus_code.compound_code) || '',
+    addressComponents: components,
+    stars: rated ? place.rating : null,
+    reviews: reviews,
+    score: rated ? finderScoreLead(place.rating, reviews, types) : 0,
+    issue: '',
+    reviewsRead: false,
+    inSuburb: true,
+    inCleanlinessSearch: true,
+    _place: place
+  };
+  if(!row.place_id && !row.name) return null;
+  if(!isCommercialProspect(row)) return null;
+  if(!placeKeptForScan(vicinity, row.plusCode, components, suburb.name, formatted || vicinity)) return null;
+  return row;
+}
+
+function runFinderWithMaps(suburbsToScan, placesLib, maxStars, minScore, apiKey, btn){
   var allResults = [];
   var seen = new Set();
   var gen = finderResultGen;
   var stopped = false;
-
-  var mapDiv = document.getElementById('_finder_map_hidden');
-  if(!mapDiv){
-    mapDiv = document.createElement('div');
-    mapDiv.id = '_finder_map_hidden';
-    mapDiv.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-    document.body.appendChild(mapDiv);
-  }
-  var center = suburbsToScan[0] || {lat:-31.9523, lng:115.8613};
-  var map = new google.maps.Map(mapDiv, {center:{lat:center.lat, lng:center.lng}, zoom:12});
-  var service = new google.maps.places.PlacesService(map);
-  var queue = [];
-  var checkPos = 0;
-  var checking = false;
-  var searchesDone = false;
-  var reviewLooks = 0;
-  var statusShownAt = 0;
-  var checkKick = false;
+  var legacyService = null;
 
   function syncLists(){
     var quotedIds = {};
@@ -2081,13 +2156,6 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     finderCommercial = commercial;
     finderSuburbOrder = suburbsToScan.map(function(s){ return s.name; });
   }
-  function paint(){
-    if(gen !== finderResultGen) return;
-    syncLists();
-    if(finderPool.length || finderCommercial.length || (finderPublishedSuburbs && finderPublishedSuburbs.length)){
-      renderFinderResults(finderPool, finderCommercial);
-    }
-  }
   function restoreBtn(){
     btn.innerHTML = '&#128270; Run Live Scan';
     btn.disabled = false;
@@ -2097,224 +2165,297 @@ function runFinderWithMaps(suburbsToScan, searchPlan, maxStars, minScore, apiKey
     finderStatus(msg, true);
     restoreBtn();
   }
-  function finishScan(){
+  function showCards(){
     if(gen !== finderResultGen || stopped) return;
     finderPool = finderPool.filter(function(r){
       return r.inSuburb !== false && rowInScannedSuburb(r) && placeHasPremisesComplaint(r) && (!minScore || (r.score || 0) >= minScore);
     });
     finderPool.sort(function(a, b){ return (b.score || 0) - (a.score || 0); });
     syncLists();
-    var total = queue.length;
-    finderStatus(total ? ('Finished. ' + total + ' of ' + total) : 'No commercial places came back.');
-    restoreBtn();
     renderFinderResults(finderPool, finderCommercial);
+    restoreBtn();
   }
-  function maybeFinish(){
-    if(stopped || gen !== finderResultGen) return;
-    if(searchesDone && !checking && checkPos >= queue.length) finishScan();
+  function remember(row){
+    if(!row) return false;
+    var key = row.place_id || (row.name + '|' + row.address);
+    if(seen.has(key)) return false;
+    seen.add(key);
+    allResults.push(row);
+    return true;
   }
-  function afterChecked(place){
-    if(stopped || gen !== finderResultGen) return;
-    place.checked = true;
-    if(place.inSuburb !== false && rowInScannedSuburb(place) && isCommercialProspect(place)){
-      if(finderPublishedSuburbs.indexOf(place.suburb) === -1) finderPublishedSuburbs.push(place.suburb);
+  function applyDetail(place, detail){
+    if(!detail) return;
+    var components = detail.address_components || detail.addressComponents || null;
+    var formatted = detail.formatted_address || detail.formattedAddress || '';
+    if(components) place.addressComponents = components;
+    if(formatted){
+      place.address = formatted;
+      place.formattedAddress = formatted;
     }
-    checkPos++;
-    paint();
-    var hold = 450 - (Date.now() - statusShownAt);
-    if(hold < 40) hold = 40;
-    setTimeout(checkNext, hold);
+    if(!placeKeptForScan(place.address, place.plusCode || '', place.addressComponents, place.suburb, place.formattedAddress || '')){
+      place.inSuburb = false;
+    }
+    var reviews = detail.reviews || [];
+    if(place.inSuburb !== false && reviews.length){
+      place.reviewsRead = true;
+      var hit = findHygieneQuote(reviews);
+      if(hit){
+        place.issue = hit.quote;
+        place.reviewAuthor = hit.author || '';
+        place.reviewStars = hit.rating;
+        place.reviewWhen = hit.when || '';
+        if(placeHasPremisesComplaint(place) && (!minScore || (place.score || 0) >= minScore)){
+          var already = false;
+          for(var pi = 0; pi < finderPool.length; pi++){
+            if(finderPool[pi] === place || (place.place_id && finderPool[pi].place_id === place.place_id)){ already = true; break; }
+          }
+          if(!already) finderPool.push(place);
+        }
+      }
+    }
   }
-  function checkNext(){
-    if(stopped || gen !== finderResultGen) return;
-    if(checkPos >= queue.length){
-      checking = false;
-      maybeFinish();
-      return;
-    }
-    checking = true;
-    var place = queue[checkPos];
-    statusShownAt = Date.now();
-    finderStatus(finderBusinessStatus(checkPos + 1, queue.length, place.name || 'Business'));
-    var needsReviews = !!(place.inCleanlinessSearch && place.place_id && typeof place.stars === 'number' && (isNaN(maxStars) || place.stars <= maxStars) && reviewLooks < FINDER_REVIEW_CAP);
-    if(!needsReviews){
-      afterChecked(place);
-      return;
-    }
-    reviewLooks++;
-    var attempt = 0;
+  function readOne(place, cb){
     var finished = false;
-    var timer = setTimeout(function(){
+    function done(){
       if(finished || stopped || gen !== finderResultGen) return;
       finished = true;
-      afterChecked(place);
-    }, FINDER_SEARCH_WAIT_MS);
-    function request(){
-      if(finished || stopped || gen !== finderResultGen) return;
-      service.getDetails({
-        placeId: place.place_id,
-        fields: ['reviews', 'address_components', 'formatted_address']
-      }, function(detail, status){
-        if(finished || gen !== finderResultGen) return;
-        var OK = google.maps.places.PlacesServiceStatus.OK;
-        var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
-        if(status === LIMIT && attempt < 2){
-          attempt++;
-          setTimeout(request, 1500 * attempt);
-          return;
-        }
-        finished = true;
-        clearTimeout(timer);
-        if(status === OK) place.reviewsRead = true;
-        if(status === OK && detail){
-          if(detail.address_components) place.addressComponents = detail.address_components;
-          if(detail.formatted_address){
-            place.address = detail.formatted_address;
-            place.formattedAddress = detail.formatted_address;
+      place.checked = true;
+      cb();
+    }
+    var timer = setTimeout(done, FINDER_SEARCH_WAIT_MS);
+    function finishDetail(detail, ok){
+      if(finished || gen !== finderResultGen) return;
+      clearTimeout(timer);
+      if(ok) applyDetail(place, detail);
+      done();
+    }
+    var live = place._place;
+    if(live && typeof live.fetchFields === 'function'){
+      live.fetchFields({fields:['reviews','formattedAddress','addressComponents']}).then(function(updated){
+        var src = updated || live;
+        finishDetail({
+          reviews: src.reviews || live.reviews || [],
+          formatted_address: src.formattedAddress || live.formattedAddress || '',
+          address_components: src.addressComponents || live.addressComponents || null
+        }, true);
+      }).catch(function(){ finishDetail(null, false); });
+      return;
+    }
+    if(legacyService && place.place_id){
+      var attempt = 0;
+      function request(){
+        if(finished || stopped || gen !== finderResultGen) return;
+        legacyService.getDetails({
+          placeId: place.place_id,
+          fields: ['reviews', 'address_components', 'formatted_address']
+        }, function(detail, status){
+          if(finished || gen !== finderResultGen) return;
+          var OK = google.maps.places.PlacesServiceStatus.OK;
+          var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
+          if(status === LIMIT && attempt < 2){
+            attempt++;
+            setTimeout(request, 1200 * attempt);
+            return;
           }
-          if(!rowInScannedSuburb(place)) place.inSuburb = false;
-          if(place.inSuburb !== false && detail.reviews && detail.reviews.length){
-            var hit = findHygieneQuote(detail.reviews);
-            if(hit){
-              place.issue = hit.quote;
-              place.reviewAuthor = hit.author || '';
-              place.reviewStars = hit.rating;
-              place.reviewWhen = hit.when || '';
-              if(placeHasPremisesComplaint(place) && (!minScore || (place.score || 0) >= minScore)){
-                var already = false;
-                for(var pi = 0; pi < finderPool.length; pi++){
-                  if(finderPool[pi] === place || (place.place_id && finderPool[pi].place_id === place.place_id)){ already = true; break; }
-                }
-                if(!already) finderPool.push(place);
-              }
-            }
-          }
-        }
-        afterChecked(place);
+          finishDetail(detail, status === OK);
+        });
+      }
+      request();
+      return;
+    }
+    clearTimeout(timer);
+    done();
+  }
+  function walkRows(rows, suburb, cb){
+    var index = 0;
+    function step(){
+      if(stopped || gen !== finderResultGen) return;
+      if(index >= rows.length){
+        finderStatus(rows.length + ' of ' + rows.length + ' · ' + suburb.name);
+        setTimeout(cb, 350);
+        return;
+      }
+      var place = rows[index];
+      var shownAt = Date.now();
+      finderStatus(finderBusinessStatus(index + 1, rows.length, place.name || 'Business'));
+      readOne(place, function(){
+        if(stopped || gen !== finderResultGen) return;
+        index++;
+        var hold = 500 - (Date.now() - shownAt);
+        if(hold < 40) hold = 40;
+        setTimeout(step, hold);
       });
     }
-    request();
+    step();
   }
-  function enqueue(row){
-    queue.push(row);
-    if(checking || checkKick) return;
-    checkKick = true;
-    setTimeout(function(){
-      checkKick = false;
-      if(!checking && !stopped && gen === finderResultGen) checkNext();
-    }, 0);
+  function takeRows(list, suburb){
+    var rows = [];
+    (list || []).forEach(function(place){
+      var row = finderRowFromPlace(place, suburb);
+      if(remember(row)) rows.push(row);
+    });
+    return rows;
   }
-
-  function searchOne(suburb, type, forCleanliness, cb){
-    var loc = new google.maps.LatLng(suburb.lat, suburb.lng);
-    var request = {location: loc, radius: FINDER_SUBURB_RADIUS, type: type};
-    var pages = 0;
-    var attempt = 0;
-    var finished = false;
-    var timer = null;
-    function doneStep(){
-      if(finished) return;
-      finished = true;
-      if(timer) clearTimeout(timer);
-      if(cb) cb();
+  function collectNew(ns, suburb){
+    var fields = ['id','displayName','formattedAddress','types','rating','userRatingCount'];
+    var center = {lat: suburb.lat, lng: suburb.lng};
+    var types = expandFinderTypes('all');
+    var jobs = types.map(function(type){
+      return ns.Place.searchNearby({
+        fields: fields,
+        locationRestriction: {center: center, radius: 3500},
+        includedPrimaryTypes: [type],
+        maxResultCount: 20,
+        language: 'en',
+        region: 'AU'
+      }).then(function(res){ return (res && res.places) || []; }).catch(function(){ return []; });
+    });
+    if(typeof ns.Place.searchByText === 'function'){
+      jobs.push(ns.Place.searchByText({
+        textQuery: suburb.name + ' Perth WA',
+        fields: fields,
+        locationBias: {center: center, radius: 3500},
+        maxResultCount: 20,
+        language: 'en',
+        region: 'AU'
+      }).then(function(res){ return (res && res.places) || []; }).catch(function(){ return []; }));
     }
-    function armTimer(){
-      if(timer) clearTimeout(timer);
-      timer = setTimeout(function(){
-        if(finished || stopped || gen !== finderResultGen) return;
-        finished = true;
-        if(!queue.length) finderStatus('That search returned nothing, moving on.');
-        if(cb) cb();
-      }, FINDER_SEARCH_WAIT_MS);
-    }
-    function onPage(results, status, pagination){
-      if(finished || stopped || gen !== finderResultGen) return;
-      var LIMIT = google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT;
-      if(status === LIMIT && attempt < 2 && pages === 0){
-        attempt++;
-        armTimer();
-        setTimeout(function(){ service.nearbySearch(request, onPage); }, 1500 * attempt);
-        return;
-      }
-      pages++;
-      if(status === google.maps.places.PlacesServiceStatus.OK && results){
-        results.forEach(function(place){
-          if(!place.place_id || seen.has(place.place_id)) return;
-          seen.add(place.place_id);
-          var plus = (place.plus_code && place.plus_code.compound_code) || '';
-          var vicinity = place.vicinity || '';
-          if(!placeInSuburb(vicinity, plus, null, suburb.name)) return;
-          var rated = typeof place.rating === 'number' && place.rating > 0;
-          var row = {
-            place_id: place.place_id,
-            name: place.name,
-            suburb: suburb.name,
-            type: finderMapType(place.types),
-            rawTypes: place.types || [],
-            address: vicinity,
-            plusCode: plus,
-            stars: rated ? place.rating : null,
-            reviews: place.user_ratings_total || 0,
-            score: rated ? finderScoreLead(place.rating, place.user_ratings_total, place.types) : 0,
-            issue: '',
-            reviewsRead: false,
-            inSuburb: true,
-            inCleanlinessSearch: !!forCleanliness
-          };
-          if(!isCommercialProspect(row)) return;
-          allResults.push(row);
-          enqueue(row);
-        });
-      } else if(status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED){
-        if(timer) clearTimeout(timer);
-        finished = true;
-        halt('Google refused the scan. Check that Places is turned on for this key.');
-        return;
-      }
-      if(suburbsToScan.length <= 3 && pagination && pagination.hasNextPage && pages < 3){
-        armTimer();
-        setTimeout(function(){ if(!finished) pagination.nextPage(); }, 400);
-        return;
-      }
-      doneStep();
-    }
-    armTimer();
-    service.nearbySearch(request, onPage);
+    return Promise.all(jobs).then(function(parts){
+      var flat = [];
+      parts.forEach(function(list){ flat = flat.concat(list || []); });
+      return flat;
+    });
   }
-
-  var suburbPos = 0;
-  function runSuburb(){
-    if(stopped || gen !== finderResultGen) return;
-    if(suburbPos >= suburbsToScan.length){
-      searchesDone = true;
-      if(!queue.length && !checking){
-        finderStatus('No commercial places came back.');
-        restoreBtn();
-        renderFinderResults([], []);
-        return;
+  function legacyMapService(suburb, cb){
+    var mapDiv = document.getElementById('_finder_map_hidden');
+    if(!mapDiv){
+      mapDiv = document.createElement('div');
+      mapDiv.id = '_finder_map_hidden';
+      mapDiv.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(mapDiv);
+    }
+    mapDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:400px;height:400px;overflow:hidden;pointer-events:none;';
+    var map = new google.maps.Map(mapDiv, {
+      center: {lat: suburb.lat, lng: suburb.lng},
+      zoom: 14,
+      disableDefaultUI: true,
+      clickableIcons: false,
+      gestureHandling: 'none'
+    });
+    var started = false;
+    function go(){
+      if(started) return;
+      started = true;
+      cb(new google.maps.places.PlacesService(map));
+    }
+    if(google.maps.event && google.maps.event.addListenerOnce) google.maps.event.addListenerOnce(map, 'idle', go);
+    setTimeout(go, 800);
+  }
+  function collectLegacy(suburb, cb){
+    legacyMapService(suburb, function(service){
+      legacyService = service;
+      var jobs = [
+        {kind:'text', query: suburb.name + ' shops Perth WA'},
+        {kind:'text', query: suburb.name + ' offices Perth WA'},
+        {kind:'text', query: suburb.name + ' medical Perth WA'},
+        {kind:'near', type:'store'},
+        {kind:'near', type:'doctor'},
+        {kind:'near', type:'shopping_mall'},
+        {kind:'near', type:'accounting'}
+      ];
+      var acc = [];
+      var i = 0;
+      var denied = false;
+      function nextJob(){
+        if(stopped || gen !== finderResultGen || denied) return;
+        if(i >= jobs.length){ cb(acc); return; }
+        var job = jobs[i++];
+        var finished = false;
+        var timer = setTimeout(function(){
+          if(finished) return;
+          finished = true;
+          nextJob();
+        }, FINDER_SEARCH_WAIT_MS);
+        function got(results, status){
+          if(finished || stopped || gen !== finderResultGen) return;
+          finished = true;
+          clearTimeout(timer);
+          var OK = google.maps.places.PlacesServiceStatus.OK;
+          var DENIED = google.maps.places.PlacesServiceStatus.REQUEST_DENIED;
+          if(status === DENIED){
+            denied = true;
+            halt('Google refused the scan. Check that Places is turned on for this key.');
+            return;
+          }
+          if(status === OK && results && results.length) acc = acc.concat(results);
+          nextJob();
+        }
+        var loc = new google.maps.LatLng(suburb.lat, suburb.lng);
+        if(job.kind === 'text' && typeof service.textSearch === 'function'){
+          service.textSearch({query: job.query, location: loc, radius: 3500}, got);
+        } else if(job.kind === 'near' && typeof service.nearbySearch === 'function'){
+          service.nearbySearch({location: loc, radius: 3500, type: job.type}, got);
+        } else {
+          clearTimeout(timer);
+          finished = true;
+          nextJob();
+        }
       }
-      maybeFinish();
+      nextJob();
+    });
+  }
+  function presentSuburb(suburb, rawPlaces, then){
+    var rows = takeRows(rawPlaces, suburb);
+    if(!rows.length){
+      if(suburbsToScan.length === 1) finderStatus('No commercial places in ' + suburb.name + '.');
+      then();
       return;
     }
-    var suburb = suburbsToScan[suburbPos];
-    var stepPos = 0;
-    function afterStep(){
+    finderStatus('Found ' + rows.length + ' in ' + suburb.name);
+    setTimeout(function(){
       if(stopped || gen !== finderResultGen) return;
-      if(stepPos >= searchPlan.length){
-        suburbPos++;
-        runSuburb();
+      walkRows(rows, suburb, then);
+    }, 600);
+  }
+  function scanAt(pos){
+    if(stopped || gen !== finderResultGen) return;
+    if(pos >= suburbsToScan.length){
+      var kept = allResults.filter(function(r){ return r.checked && r.inSuburb !== false; });
+      if(!kept.length){
+        var only = suburbsToScan.length === 1 ? suburbsToScan[0].name : 'those suburbs';
+        finderStatus('No commercial places in ' + only + '.');
+        restoreBtn();
         return;
       }
-      var step = searchPlan[stepPos++];
-      searchOne(suburb, step.type, step.forCleanliness, afterStep);
+      showCards();
+      return;
     }
-    afterStep();
+    var suburb = suburbsToScan[pos];
+    if(pos === 0 || suburbsToScan.length > 1) finderStatus('Searching ' + suburb.name);
+    var ns = finderPlaceNamespace(placesLib);
+    function afterCollected(raw){
+      if(stopped || gen !== finderResultGen) return;
+      presentSuburb(suburb, raw || [], function(){
+        scanAt(pos + 1);
+      });
+    }
+    if(ns){
+      collectNew(ns, suburb).then(function(list){
+        if(stopped || gen !== finderResultGen) return;
+        if(list && list.length) afterCollected(list);
+        else collectLegacy(suburb, afterCollected);
+      }).catch(function(){
+        if(stopped || gen !== finderResultGen) return;
+        collectLegacy(suburb, afterCollected);
+      });
+      return;
+    }
+    collectLegacy(suburb, afterCollected);
   }
   finderPool = [];
   finderCommercial = [];
-  runSuburb();
+  scanAt(0);
 }
-
 function isGooglePlaceId(id){
   return typeof id === 'string' && id.indexOf('ChI') === 0;
 }
