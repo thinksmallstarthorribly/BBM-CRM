@@ -4389,22 +4389,12 @@ var _clData=[], _clFilter='all';
 function rChecklist(){
   var tbody=document.getElementById('cl-tbody');
   var empty=document.getElementById('cl-empty');
-  var kpis=document.getElementById('cl-kpis');
-  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--t3)">Loading&#8230;</td></tr>';
+  tbody.innerHTML='';
   empty.style.display='none';
-
-  fetch('/.netlify/functions/checklist-responses')
-    .then(function(r){return r.json();})
-    .then(function(data){
-      _clData=Array.isArray(data)?data:[];
-      // Update badge on nav
-      var badge=document.getElementById('clBadge');
-      if(badge){ if(_clData.length>0){badge.textContent=_clData.length;badge.style.display='';}else{badge.style.display='none';} }
-      _renderClTable();
-    })
-    .catch(function(){
-      tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--lost)">Could not load responses. Check your Netlify function is deployed.</td></tr>';
-    });
+  _clData=[];
+  var badge=document.getElementById('clBadge');
+  if(badge) badge.style.display='none';
+  _renderClTable();
 }
 
 function clFilter(f,btn){
