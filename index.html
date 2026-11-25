@@ -518,11 +518,12 @@ section{position:relative;z-index:1;overflow:hidden}
 
 .cl-card-bottom{padding:16px 20px 20px}
 .go{
-  width:100%;padding:14px;border-radius:12px;
+  display:block;width:100%;padding:14px;border-radius:12px;
   background:var(--b);color:#fff;border:none;
   font-family:'Baloo 2',cursive;
   font-size:16px;font-weight:800;cursor:pointer;
   text-transform:uppercase;letter-spacing:.5px;
+  text-align:center;text-decoration:none;box-sizing:border-box;
   box-shadow:0 6px 22px rgba(91,200,245,.4);
   transition:all .2s;
 }
@@ -731,7 +732,7 @@ footer{
   <div class="nav-links">
     <a href="#trust">Why Us</a>
     <a href="#health">Health</a>
-    <a href="#checklist">Checklist</a>
+    <a href="https://bigbluemop.com.au/checklist.html">Checklist</a>
     <a href="#contact">Contact</a>
     <a href="tel:0410260800" class="nav-cta">📞 Call Alex</a>
   </div>
@@ -749,7 +750,7 @@ footer{
     <em>"I wish this place was dirtier."</em>
   </p>
   <div class="hero-btns">
-    <a href="#checklist" class="btn-a">🔍 Get the Free Checklist</a>
+    <a href="https://bigbluemop.com.au/checklist.html" class="btn-a">🔍 Get the Free Checklist</a>
     <a href="#contact" class="btn-b">Get a Quote</a>
   </div>
   <div class="hero-proof">
@@ -877,8 +878,8 @@ footer{
             </div>
           </div>
           <div class="cl-card-bottom">
-            <button class="go" id="submitBtn" disabled onclick="submitChecklist()">Get My Results →</button>
-            <p class="sn2">Your responses go directly to Big Blue Mop. We never share your data.</p>
+            <a class="go" id="submitBtn" href="https://bigbluemop.com.au/checklist.html">Get My Results →</a>
+            <p class="sn2">Take the checklist on bigbluemop.com.au. We never share your data.</p>
           </div>
         </div>
       </div>
@@ -1182,14 +1183,6 @@ function submitChecklist(){
     document.getElementById('resultAction').textContent='Done';
     document.getElementById('resultAction').onclick=function(e){e.preventDefault();ov.classList.remove('vis');};
   }
-  // Detect source channel from URL param (?src=email-campaign-name or blank = website)
-  var src=new URLSearchParams(window.location.search).get('src')||'website';
-  // Fire and forget — send to Netlify function for email + CRM storage
-  fetch('/.netlify/functions/checklist-submit',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({bizName:biz,contactName:name,email:email,pct:s.pct,tier:s.tier,fails:s.fails,answers:answers,source:src})
-  }).catch(function(){/* silent — result shown to user regardless */});
 }
 
 function fSubmit(e){
